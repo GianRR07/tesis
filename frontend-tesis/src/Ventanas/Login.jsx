@@ -29,7 +29,7 @@ export default function Login() {
           {/* Botón con redirección */}
           <button
             className={styles["btn-ingresar"]}
-            onClick={() => navigate("/coordinador")}
+            onClick={() => navigate("/tutor")}
           >
             Ingresar
           </button>
