@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import styles from "../../styles/Panel.module.css";
 
 export default function RegistrarDocente() {
   const [nombre, setNombre] = useState("");
@@ -21,87 +20,113 @@ export default function RegistrarDocente() {
       cursos,
     });
     alert("Docente registrado (simulado).");
-    // Aquí luego se enviará al backend
   };
 
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title}>Registro de Docente</h2>
+    <div className="p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-[#004d8f]">
+        Registro de Docente
+      </h2>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+      >
         {/* Columna izquierda */}
-        <div className={styles.left}>
-          <label>Nombre del Docente:</label>
-          <input
-            type="text"
-            placeholder="Ejem: Miguel Fonsi"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-          />
-
-          <label>Correo:</label>
-          <input
-            type="email"
-            placeholder="Ejem: miguelfonsiEDU@gmail.com"
-            value={correo}
-            onChange={(e) => setCorreo(e.target.value)}
-          />
-
-          <label>Teléfono:</label>
-          <input
-            type="tel"
-            placeholder="Ejem: 999888777"
-            value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
-          />
-
-          <hr />
-
-          <h3 className={styles.subtitle}>Acceso a la plataforma</h3>
-
-          <label>Correo de ingreso:</label>
-          <input
-            type="email"
-            placeholder="Ejem: mfonsi@algo.pe"
-            value={correoIngreso}
-            onChange={(e) => setCorreoIngreso(e.target.value)}
-          />
-
-          <label>Contraseña:</label>
-          <div className={styles.passwordWrapper}>
+        <div className="space-y-4">
+          <label className="block">
+            <span className="font-medium text-gray-700">Nombre del docente:</span>
             <input
-              type={mostrarContrasena ? "text" : "password"}
-              placeholder="Ejem: ****"
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
+              type="text"
+              placeholder="Ej: Miguel Fonsi"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
             />
-            <button
-              type="button"
-              className={styles.toggleBtn}
-              onClick={() => setMostrarContrasena(!mostrarContrasena)}
-            >
-              {mostrarContrasena ? "Ocultar" : "Ver"}
-            </button>
-          </div>
+          </label>
+
+          <label className="block">
+            <span className="font-medium text-gray-700">Correo:</span>
+            <input
+              type="email"
+              placeholder="Ej: miguelfonsiEDU@gmail.com"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            />
+          </label>
+
+          <label className="block">
+            <span className="font-medium text-gray-700">Teléfono:</span>
+            <input
+              type="tel"
+              placeholder="Ej: 999888777"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            />
+          </label>
+
+          <hr className="my-4" />
+
+          <h3 className="text-lg font-semibold text-[#004d8f]">
+            Acceso a la plataforma
+          </h3>
+
+          <label className="block">
+            <span className="font-medium text-gray-700">Correo de ingreso:</span>
+            <input
+              type="email"
+              placeholder="Ej: mfonsi@algo.pe"
+              value={correoIngreso}
+              onChange={(e) => setCorreoIngreso(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            />
+          </label>
+
+          <label className="block">
+            <span className="font-medium text-gray-700">Contraseña:</span>
+            <div className="flex gap-2">
+              <input
+                type={mostrarContrasena ? "text" : "password"}
+                placeholder="Ej: ****"
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
+                className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+              />
+              <button
+                type="button"
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                onClick={() => setMostrarContrasena(!mostrarContrasena)}
+              >
+                {mostrarContrasena ? "Ocultar" : "Ver"}
+              </button>
+            </div>
+          </label>
         </div>
 
         {/* Columna derecha */}
-        <div className={styles.right}>
-          <label>Cursos que enseña:</label>
-          <textarea
-            placeholder="Ejem: Matemática&#10;Comunicación&#10;Biología"
-            value={cursos}
-            onChange={(e) => setCursos(e.target.value)}
-          />
-          <p className={styles.nota}>
-            Nota: Para registrar el curso correctamente asegúrese de usar un
-            salto de línea por curso.
+        <div className="space-y-4">
+          <label className="block">
+            <span className="font-medium text-gray-700">Cursos que enseña:</span>
+            <textarea
+              placeholder={"Ej: Matemática\nComunicación\nBiología"}
+              value={cursos}
+              onChange={(e) => setCursos(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300 h-40 resize-none"
+            />
+          </label>
+          <p className="text-sm text-gray-500">
+            Nota: Use un salto de línea por curso.
           </p>
         </div>
 
         {/* Footer */}
-        <div className={styles.footer}>
-          <button type="submit" className={styles.btn}>
+        <div className="md:col-span-2 flex justify-end">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-[#004d8f] text-white rounded-lg hover:bg-blue-700 transition"
+          >
             Registrar Docente
           </button>
         </div>

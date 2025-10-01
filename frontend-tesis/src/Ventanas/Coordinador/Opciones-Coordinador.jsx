@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import styles from "../../styles/Panel.module.css";
 
 // Importamos los componentes de cada opción
 import RegistrarCurso from "./RegistrarCurso";
@@ -12,58 +11,86 @@ export default function OpcionesCoordinador() {
   const [active, setActive] = useState("inicio");
 
   return (
-    <div className={styles.container}>
+    <div className="flex flex-col min-h-screen w-full">
       {/* Header */}
-      <header className={styles.header}>
-        <h1>Opciones de Coordinador</h1>
+      <header className="bg-[#004d8f] text-white text-center py-4 text-lg font-bold">
+        Opciones de Coordinador
       </header>
 
       {/* Layout */}
-      <div className={styles.layout}>
+      <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className={styles.sidebar}>
-          <button
-            className={`${styles.sidebarBtn} ${active === "registrarCurso" ? styles.active : ""}`}
-            onClick={() => setActive("registrarCurso")}
-          >
-            Registrar Curso
-          </button>
-          <button
-            className={`${styles.sidebarBtn} ${active === "registrarDocente" ? styles.active : ""}`}
-            onClick={() => setActive("registrarDocente")}
-          >
-            Registrar Docente
-          </button>
-          <button
-            className={`${styles.sidebarBtn} ${active === "asignarTutor" ? styles.active : ""}`}
-            onClick={() => setActive("asignarTutor")}
-          >
-            Asignar Tutor
-          </button>
-          <button
-            className={`${styles.sidebarBtn} ${active === "listaAulas" ? styles.active : ""}`}
-            onClick={() => setActive("listaAulas")}
-          >
-            Lista de aulas
-          </button>
-          <button
-            className={`${styles.sidebarBtn} ${active === "listaDocentes" ? styles.active : ""}`}
-            onClick={() => setActive("listaDocentes")}
-          >
-            Lista de docentes
-          </button>
+        <aside className="w-56 bg-[#004d8f] p-4 flex flex-col justify-between">
+          <div className="flex flex-col space-y-3">
+            <button
+              className={`py-2 px-4 rounded-full font-bold transition ${
+                active === "registrarCurso"
+                  ? "bg-gray-300 text-[#004d8f]"
+                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+              }`}
+              onClick={() => setActive("registrarCurso")}
+            >
+              Registrar Curso
+            </button>
 
-          <div className={styles.sidebarBottom}>
-            <button className={styles.logoutBtn}>Cerrar Sesión</button>
+            <button
+              className={`py-2 px-4 rounded-full font-bold transition ${
+                active === "registrarDocente"
+                  ? "bg-gray-300 text-[#004d8f]"
+                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+              }`}
+              onClick={() => setActive("registrarDocente")}
+            >
+              Registrar Docente
+            </button>
+
+            <button
+              className={`py-2 px-4 rounded-full font-bold transition ${
+                active === "asignarTutor"
+                  ? "bg-gray-300 text-[#004d8f]"
+                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+              }`}
+              onClick={() => setActive("asignarTutor")}
+            >
+              Asignar Tutor
+            </button>
+
+            <button
+              className={`py-2 px-4 rounded-full font-bold transition ${
+                active === "listaAulas"
+                  ? "bg-gray-300 text-[#004d8f]"
+                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+              }`}
+              onClick={() => setActive("listaAulas")}
+            >
+              Lista de aulas
+            </button>
+
+            <button
+              className={`py-2 px-4 rounded-full font-bold transition ${
+                active === "listaDocentes"
+                  ? "bg-gray-300 text-[#004d8f]"
+                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+              }`}
+              onClick={() => setActive("listaDocentes")}
+            >
+              Lista de docentes
+            </button>
           </div>
+
+          <button className="w-full mt-6 bg-red-100 text-red-600 font-bold rounded-full py-2 hover:bg-red-200 transition">
+            Cerrar Sesión
+          </button>
         </aside>
 
         {/* Contenido principal */}
-        <main className={styles.content}>
+        <main className="flex-1 bg-gray-50 p-6">
           {active === "inicio" && (
-            <div className={styles.welcome}>
-              <h2>Bienvenido Coordinador</h2>
-              <p>Seleccione una opción del menú lateral</p>
+            <div className="text-center text-gray-600 mt-10">
+              <h2 className="text-2xl font-bold text-[#004d8f]">
+                Bienvenido Coordinador
+              </h2>
+              <p className="mt-2">Seleccione una opción del menú lateral</p>
             </div>
           )}
 

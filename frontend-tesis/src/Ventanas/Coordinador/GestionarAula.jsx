@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import styles from "../../styles/Panel.module.css";
 
 export default function GestionarAula() {
-  // Estados para guardar los valores del formulario
   const [nombre, setNombre] = useState("");
   const [grado, setGrado] = useState("");
   const [seccion, setSeccion] = useState("");
@@ -12,59 +10,72 @@ export default function GestionarAula() {
     e.preventDefault();
     console.log("Datos del aula:", { nombre, grado, seccion, curso });
     alert("Aula registrada (simulado, falta backend).");
-    // Aquí luego se enviará al backend
   };
 
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title}>Registro de aulas</h2>
+    <div className="p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-gray-700">Registro de aulas</h2>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Columna izquierda */}
-        <div className={styles.left}>
-          <label>Nombre de aula:</label>
-          <input
-            type="text"
-            placeholder="Ejem: Salón 1° primaria - A"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-          />
+        <div className="space-y-4">
+          <label className="block">
+            <span className="font-medium">Nombre de aula:</span>
+            <input
+              type="text"
+              placeholder="Ejem: Salón 1° primaria - A"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            />
+          </label>
 
-          <label>Grado:</label>
-          <input
-            type="text"
-            placeholder="Ejem: 1° de primaria"
-            value={grado}
-            onChange={(e) => setGrado(e.target.value)}
-          />
+          <label className="block">
+            <span className="font-medium">Grado:</span>
+            <input
+              type="text"
+              placeholder="Ejem: 1° de primaria"
+              value={grado}
+              onChange={(e) => setGrado(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            />
+          </label>
 
-          <label>Sección:</label>
-          <input
-            type="text"
-            placeholder="Ejem: A"
-            value={seccion}
-            onChange={(e) => setSeccion(e.target.value)}
-          />
+          <label className="block">
+            <span className="font-medium">Sección:</span>
+            <input
+              type="text"
+              placeholder="Ejem: A"
+              value={seccion}
+              onChange={(e) => setSeccion(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            />
+          </label>
         </div>
 
         {/* Columna derecha */}
-        <div className={styles.right}>
-          <label>Cursos del aula:</label>
-          <select
-            value={curso}
-            onChange={(e) => setCurso(e.target.value)}
-          >
-            <option value="">-- Seleccione un curso --</option>
-            {/* Aquí luego se mapearán cursos desde la BD */}
-            <option value="matematicas">Matemáticas</option>
-            <option value="comunicacion">Comunicación</option>
-            <option value="ciencias">Ciencias</option>
-          </select>
+        <div className="space-y-4">
+          <label className="block">
+            <span className="font-medium">Cursos del aula:</span>
+            <select
+              value={curso}
+              onChange={(e) => setCurso(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+            >
+              <option value="">-- Seleccione un curso --</option>
+              <option value="matematicas">Matemáticas</option>
+              <option value="comunicacion">Comunicación</option>
+              <option value="ciencias">Ciencias</option>
+            </select>
+          </label>
         </div>
 
-        {/* Botón en esquina inferior derecha */}
-        <div className={styles.footer}>
-          <button type="submit" className={styles.btn}>
+        {/* Footer */}
+        <div className="md:col-span-2 flex justify-end">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
             Registrar aula
           </button>
         </div>

@@ -1,9 +1,7 @@
 import React from "react";
-import styles from "../../styles/Panel.module.css";
-import { FaChartLine } from "react-icons/fa"; // icono de métricas
+import { FaChartLine } from "react-icons/fa";
 
 export default function ListaEstudiantes() {
-  // Por ahora dejamos datos simulados
   const estudiantes = [
     "Valentina Ramírez Torres",
     "Diego Fernández López",
@@ -14,23 +12,28 @@ export default function ListaEstudiantes() {
   ];
 
   return (
-    <div className={styles["content-container"]}>
-      <h2 className={styles["title"]}>Lista de estudiantes</h2>
+    <div className="bg-white shadow-md rounded-lg p-6">
+      <h2 className="text-2xl font-bold text-[#004d8f] mb-4">
+        Lista de estudiantes
+      </h2>
 
-      <table className={styles["table"]}>
-        <thead>
+      <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
+        <thead className="bg-[#004d8f] text-white">
           <tr>
-            <th>Nombre</th>
-            <th>Opciones</th>
+            <th className="p-2 text-left">Nombre</th>
+            <th className="p-2 text-left">Opciones</th>
           </tr>
         </thead>
         <tbody>
-          {estudiantes.map((estudiante, index) => (
-            <tr key={index}>
-              <td>{estudiante}</td>
-              <td>
-                <button className={styles["btn-metricas"]}>
-                  <FaChartLine className={styles["icon"]} /> Ver métricas de rendimiento
+          {estudiantes.map((est, i) => (
+            <tr
+              key={i}
+              className="border-b hover:bg-gray-100 transition cursor-pointer"
+            >
+              <td className="p-2">{est}</td>
+              <td className="p-2">
+                <button className="flex items-center gap-2 bg-[#004d8f] text-white px-3 py-1 rounded-full hover:bg-blue-900 transition">
+                  <FaChartLine /> Ver métricas de rendimiento
                 </button>
               </td>
             </tr>
