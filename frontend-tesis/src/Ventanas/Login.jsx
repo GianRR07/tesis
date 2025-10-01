@@ -26,12 +26,26 @@ export default function Login() {
             className={styles["login-input"]}
           />
 
-          {/* Botón con redirección */}
+          {/* Botones de prueba para navegar */}
+          <button
+            className={styles["btn-ingresar"]}
+            onClick={() => navigate("/coordinador")}
+          >
+            Ingresar como Coordinador
+          </button>
+
           <button
             className={styles["btn-ingresar"]}
             onClick={() => navigate("/tutor")}
           >
-            Ingresar
+            Ingresar como Tutor
+          </button>
+
+          <button
+            className={styles["btn-ingresar"]}
+            onClick={() => navigate("/docente")}
+          >
+            Ingresar como Docente
           </button>
 
           <button className={styles["btn-contacto"]}>Contáctanos</button>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./Tutor.module.css";
+import styles from "../../styles/Panel.module.css";
 import { FaTrash, FaEdit, FaDownload, FaUpload } from "react-icons/fa";
 
 export default function GestionExamen() {

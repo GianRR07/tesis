@@ -1,21 +1,17 @@
 import React, { useState } from "react";
 import styles from "../../styles/Panel.module.css";
 
-// Importamos las subpantallas del tutor
-import GestionarAulaTutor from "./GestionarAulaTutor";
-import ListaEstudiantes from "./ListaEstudiantes";
-import GestionExamen from "./GestionExamen";
-import EvaluarExamen from "./EvaluarExamen";
+import ListaEstudiantesDocente from "./ListaEstudiantesDocente";
+import EvaluarExamenDocente from "./EvaluarExamenDocente";
 
-
-export default function OpcionesTutor() {
+export default function DocenteOpciones() {
   const [active, setActive] = useState("inicio");
 
   return (
     <div className={styles.container}>
       {/* Header */}
       <header className={styles.header}>
-        <h1>Opciones de Tutor</h1>
+        <h1>Opciones de Docente</h1>
       </header>
 
       {/* Layout */}
@@ -23,22 +19,10 @@ export default function OpcionesTutor() {
         {/* Sidebar */}
         <aside className={styles.sidebar}>
           <button
-            className={`${styles.sidebarBtn} ${active === "aula" ? styles.active : ""}`}
-            onClick={() => setActive("aula")}
-          >
-            Gestionar aula
-          </button>
-          <button
             className={`${styles.sidebarBtn} ${active === "estudiantes" ? styles.active : ""}`}
             onClick={() => setActive("estudiantes")}
           >
             Lista de estudiantes
-          </button>
-          <button
-            className={`${styles.sidebarBtn} ${active === "examen" ? styles.active : ""}`}
-            onClick={() => setActive("examen")}
-          >
-            Gestión de Examen
           </button>
           <button
             className={`${styles.sidebarBtn} ${active === "evaluar" ? styles.active : ""}`}
@@ -56,15 +40,13 @@ export default function OpcionesTutor() {
         <main className={styles.content}>
           {active === "inicio" && (
             <div className={styles.welcome}>
-              <h2>Bienvenido Tutor</h2>
+              <h2>Bienvenido Docente</h2>
               <p>Seleccione una opción del menú lateral</p>
             </div>
           )}
 
-          {active === "aula" && <GestionarAulaTutor />}
-          {active === "estudiantes" && <ListaEstudiantes />}
-          {active === "examen" && <GestionExamen />}
-          {active === "evaluar" && <EvaluarExamen />}
+          {active === "estudiantes" && <ListaEstudiantesDocente />}
+          {active === "evaluar" && <EvaluarExamenDocente />}
         </main>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./RegistrarCurso.module.css";
+import styles from "../../styles/Panel.module.css";
 
 export default function RegistrarCurso() {
   const [nombreCurso, setNombreCurso] = useState("");

@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./Tutor.module.css";
+import styles from "../../styles/Panel.module.css";
 import { FaChartLine } from "react-icons/fa"; // icono de métricas
 
 export default function ListaEstudiantes() {

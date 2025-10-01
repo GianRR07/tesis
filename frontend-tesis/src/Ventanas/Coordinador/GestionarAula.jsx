@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./GestionarAula.module.css";
+import styles from "../../styles/Panel.module.css";
 
 export default function GestionarAula() {
   // Estados para guardar los valores del formulario

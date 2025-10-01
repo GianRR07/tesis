@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./Tutor.module.css";
+import styles from "../../styles/Panel.module.css";
 
 export default function EvaluarExamen() {
   const [alumno, setAlumno] = useState("");
