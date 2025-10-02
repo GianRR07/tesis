@@ -1,0 +1,11 @@
+{
+  "name": "tesis",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n FRONT,BACK -c auto \"npm:dev --prefix frontend-tesis\" \"npm:dev --prefix backend-tesis\"",
+    "install:all": "npm i --prefix frontend-tesis && npm i --prefix backend-tesis"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
