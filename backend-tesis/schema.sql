@@ -13,7 +13,11 @@ DROP TABLE IF EXISTS tutores;
 CREATE TABLE docentes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL
+    email TEXT UNIQUE NOT NULL,           -- correo de contacto
+    telefono TEXT,                        -- teléfono del docente
+    cursos_que_ensena TEXT,               -- texto con cursos (uno por línea o separados por coma)
+    correo_ingreso TEXT UNIQUE NOT NULL,  -- usuario para login
+    password_hash TEXT NOT NULL           -- hash de la contraseña
 );
 
 -- TUTORES

@@ -1,18 +1,1 @@
-# Node
 node_modules/
-npm-debug.log
-yarn-error.log
-
-# Env files
-*.env
-
-# Build
-dist/
-build/
-
-# Database
-*.db
-
-# IDE/editor
-.vscode/
-.DS_Store

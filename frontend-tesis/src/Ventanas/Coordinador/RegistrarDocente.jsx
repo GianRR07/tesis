@@ -9,17 +9,46 @@ export default function RegistrarDocente() {
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [cursos, setCursos] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Datos del docente:", {
-      nombre,
-      correo,
-      telefono,
-      correoIngreso,
-      contrasena,
-      cursos,
-    });
-    alert("Docente registrado (simulado).");
+
+    // Validaciones simples en cliente
+    if (!nombre || !correo || !correoIngreso || !contrasena) {
+      alert("Completa los campos obligatorios: Nombre, Correo, Correo de ingreso y Contraseña.");
+      return;
+    }
+
+    try {
+      const res = await fetch(import.meta.env.VITE_API_URL + "/docentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre,
+          correo,             // correo de contacto
+          telefono,
+          correoIngreso,      // usuario para login
+          contrasena,         // texto plano; el backend lo hashea
+          cursos              // textarea con saltos de línea
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+
+      // Éxito
+      setNombre("");
+      setCorreo("");
+      setTelefono("");
+      setCorreoIngreso("");
+      setContrasena("");
+      setCursos("");
+      alert("Docente registrado correctamente.");
+    } catch (err) {
+      console.error(err);
+      alert("Error al registrar docente: " + err.message);
+    }
   };
 
   return (
