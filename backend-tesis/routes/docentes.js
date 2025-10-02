@@ -20,6 +20,30 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// Eliminar docente por ID
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: "VALIDATION_ERROR", message: "ID inválido" });
+    }
+    const db = await openDb();
+
+    // Opcional: validar existencia
+    const existe = await db.get("SELECT id FROM docentes WHERE id = ?", [id]);
+    if (!existe) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Docente no encontrado" });
+    }
+
+    await db.run("DELETE FROM docentes WHERE id = ?", [id]);
+    return res.status(204).send(); // No Content
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
+  }
+});
+
 // Crear docente (guarda todos los campos + hash de contraseña)
 router.post("/", async (req, res) => {
   try {
