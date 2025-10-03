@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 // Importamos los componentes de cada opción
+import GestionarAula from "./GestionarAula";
 import RegistrarCurso from "./RegistrarCurso";
 import RegistrarDocente from "./RegistrarDocente";
 import AsignarTutor from "./AsignarTutor";
@@ -22,6 +23,17 @@ export default function OpcionesCoordinador() {
         {/* Sidebar */}
         <aside className="w-56 bg-[#004d8f] p-4 flex flex-col justify-between">
           <div className="flex flex-col space-y-3">
+
+            <button
+              className={`py-2 px-4 rounded-full font-bold transition ${
+                active === "registrarDocente"
+                  ? "bg-gray-300 text-[#004d8f]"
+                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+              }`}
+              onClick={() => setActive("gestionarAula")}
+            >
+              Gestionar Aula
+            </button>
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${
                 active === "registrarCurso"
