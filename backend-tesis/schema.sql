@@ -30,7 +30,9 @@ CREATE TABLE tutores (
 -- CURSOS (ej. Matemáticas, Comunicación, etc.)
 CREATE TABLE cursos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL UNIQUE
+    nombre TEXT NOT NULL UNIQUE,
+    docente_id INTEGER,                    -- docente asignado al curso
+    FOREIGN KEY (docente_id) REFERENCES docentes(id)
 );
 
 -- AULAS (ej. Aula 1, Aula 2, etc.)

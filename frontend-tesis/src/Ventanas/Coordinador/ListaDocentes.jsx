@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 export default function ListaDocentes() {
   const [docentes, setDocentes] = useState([]);
+  const [cursos, setCursos] = useState([]); // <- NUEVO
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
@@ -9,10 +10,20 @@ export default function ListaDocentes() {
     try {
       setLoading(true);
       setErr("");
-      const res = await fetch(import.meta.env.VITE_API_URL + "/docentes");
-      if (!res.ok) throw new Error("No se pudo obtener la lista de docentes");
-      const data = await res.json();
-      setDocentes(data);
+
+      const [resDocentes, resCursos] = await Promise.all([
+        fetch(import.meta.env.VITE_API_URL + "/docentes"),
+        fetch(import.meta.env.VITE_API_URL + "/cursos"),
+      ]);
+
+      if (!resDocentes.ok) throw new Error("No se pudo obtener la lista de docentes");
+      if (!resCursos.ok) throw new Error("No se pudo obtener la lista de cursos");
+
+      const dataDocentes = await resDocentes.json();
+      const dataCursos = await resCursos.json();
+
+      setDocentes(dataDocentes);
+      setCursos(dataCursos); // [{id, nombre, docente_id}, ...]
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -58,35 +69,45 @@ export default function ListaDocentes() {
           <thead className="bg-blue-300">
             <tr>
               <th className="border px-3 py-2">Nombre</th>
-              <th className="border px-3 py-2">Cursos</th>
+              <th className="border px-3 py-2">Cursos que puede enseñar</th>
+              <th className="border px-3 py-2">Cursos asignados</th>
               <th className="border px-3 py-2">Correo</th>
               <th className="border px-3 py-2">Aula / Tutor</th>
               <th className="border px-3 py-2">Opciones</th>
             </tr>
           </thead>
+
           <tbody>
             {docentes.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-500">
+                <td colSpan={6} className="text-center py-6 text-gray-500">
                   No hay docentes registrados.
                 </td>
               </tr>
             ) : (
               docentes.map((doc) => {
-                const cursos = (doc.cursos_que_ensena || "")
+                // Cursos que puede enseñar (del campo texto del docente)
+                const cursosPuede = (doc.cursos_que_ensena || "")
                   .split(/\r?\n/)
                   .map(s => s.trim())
                   .filter(Boolean);
 
+                // Cursos asignados (desde la tabla cursos por docente_id)
+                const asignados = cursos
+                  .filter(c => Number(c.docente_id) === Number(doc.id))
+                  .map(c => c.nombre);
+
                 return (
                   <tr key={doc.id} className="hover:bg-gray-50">
                     <td className="border px-3 py-2">{doc.nombre}</td>
+
+                    {/* Cursos que puede enseñar */}
                     <td className="border px-3 py-2">
-                      {cursos.length === 0 ? (
+                      {cursosPuede.length === 0 ? (
                         "—"
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          {cursos.map((c, idx) => (
+                          {cursosPuede.map((c, idx) => (
                             <span
                               key={idx}
                               className="inline-block px-2 py-1 text-xs rounded bg-blue-100 border border-blue-300"
@@ -97,6 +118,25 @@ export default function ListaDocentes() {
                         </div>
                       )}
                     </td>
+
+                    {/* Cursos asignados */}
+                    <td className="border px-3 py-2">
+                      {asignados.length === 0 ? (
+                        "—"
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {asignados.map((c, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-block px-2 py-1 text-xs rounded bg-green-100 border border-green-300"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+
                     <td className="border px-3 py-2">{doc.email}</td>
                     <td className="border px-3 py-2">—</td>
                     <td className="border px-3 py-2 flex gap-2">

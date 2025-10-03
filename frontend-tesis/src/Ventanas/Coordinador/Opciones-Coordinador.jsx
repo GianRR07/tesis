@@ -25,65 +25,61 @@ export default function OpcionesCoordinador() {
           <div className="flex flex-col space-y-3">
 
             <button
-              className={`py-2 px-4 rounded-full font-bold transition ${
-                active === "registrarDocente"
+              className={`py-2 px-4 rounded-full font-bold transition ${active === "gestionarAula"
                   ? "bg-gray-300 text-[#004d8f]"
                   : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+                }`}
               onClick={() => setActive("gestionarAula")}
             >
               Gestionar Aula
             </button>
+
+
             <button
-              className={`py-2 px-4 rounded-full font-bold transition ${
-                active === "registrarCurso"
+              className={`py-2 px-4 rounded-full font-bold transition ${active === "registrarCurso"
                   ? "bg-gray-300 text-[#004d8f]"
                   : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+                }`}
               onClick={() => setActive("registrarCurso")}
             >
               Registrar Curso
             </button>
 
             <button
-              className={`py-2 px-4 rounded-full font-bold transition ${
-                active === "registrarDocente"
+              className={`py-2 px-4 rounded-full font-bold transition ${active === "registrarDocente"
                   ? "bg-gray-300 text-[#004d8f]"
                   : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+                }`}
               onClick={() => setActive("registrarDocente")}
             >
               Registrar Docente
             </button>
 
             <button
-              className={`py-2 px-4 rounded-full font-bold transition ${
-                active === "asignarTutor"
+              className={`py-2 px-4 rounded-full font-bold transition ${active === "asignarTutor"
                   ? "bg-gray-300 text-[#004d8f]"
                   : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+                }`}
               onClick={() => setActive("asignarTutor")}
             >
               Asignar Tutor
             </button>
 
             <button
-              className={`py-2 px-4 rounded-full font-bold transition ${
-                active === "listaAulas"
+              className={`py-2 px-4 rounded-full font-bold transition ${active === "listaAulas"
                   ? "bg-gray-300 text-[#004d8f]"
                   : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+                }`}
               onClick={() => setActive("listaAulas")}
             >
               Lista de aulas
             </button>
 
             <button
-              className={`py-2 px-4 rounded-full font-bold transition ${
-                active === "listaDocentes"
+              className={`py-2 px-4 rounded-full font-bold transition ${active === "listaDocentes"
                   ? "bg-gray-300 text-[#004d8f]"
                   : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+                }`}
               onClick={() => setActive("listaDocentes")}
             >
               Lista de docentes
@@ -105,7 +101,8 @@ export default function OpcionesCoordinador() {
               <p className="mt-2">Seleccione una opción del menú lateral</p>
             </div>
           )}
-
+          
+          {active === "gestionarAula" && <GestionarAula />}
           {active === "registrarCurso" && <RegistrarCurso />}
           {active === "registrarDocente" && <RegistrarDocente />}
           {active === "asignarTutor" && <AsignarTutor />}
