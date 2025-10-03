@@ -39,6 +39,8 @@ CREATE TABLE cursos (
 CREATE TABLE aulas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL UNIQUE,
+    grado TEXT NOT NULL,
+    seccion TEXT NOT NULL,
     tutor_id INTEGER,
     FOREIGN KEY (tutor_id) REFERENCES tutores(id)
 );
