@@ -48,7 +48,7 @@ export default function ListaAulas() {
               <th className="border px-3 py-2">Nombre</th>
               <th className="border px-3 py-2">Grado</th>
               <th className="border px-3 py-2">Sección</th>
-              <th className="border px-3 py-2">Tutor</th>
+              <th className="border px-3 py-2">Tutores</th>
               <th className="border px-3 py-2">Opciones</th>
             </tr>
           </thead>
@@ -65,8 +65,22 @@ export default function ListaAulas() {
                   <td className="border px-3 py-2">{aula.nombre}</td>
                   <td className="border px-3 py-2">{aula.grado}</td>
                   <td className="border px-3 py-2">{aula.seccion}</td>
-                  <td className="border px-3 py-2">{aula.tutor_nombre || "—"}</td>
-                  <td className="border px-3 py-2 flex gap-2">
+                  <td className="border px-3 py-2">
+                    {!aula.tutores || aula.tutores.length === 0 ? (
+                      "—"
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {aula.tutores.map((t) => (
+                          <span
+                            key={t.id}
+                            className="inline-block px-2 py-1 text-xs rounded bg-green-100 border border-green-300"
+                          >
+                            {t.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>                  <td className="border px-3 py-2 flex gap-2">
                     <button
                       onClick={() => handleEditar(aula.id)}
                       className="px-2 py-1 bg-blue-400 text-white rounded hover:bg-blue-500"

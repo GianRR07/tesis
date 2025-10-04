@@ -56,6 +56,16 @@ CREATE TABLE aulas_cursos (
     FOREIGN KEY (docente_id) REFERENCES docentes(id)
 );
 
+-- Relación: AULA - TUTORES (un aula puede tener hasta 2 tutores; se valida en backend)
+CREATE TABLE aula_tutores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    aula_id INTEGER NOT NULL,
+    docente_id INTEGER NOT NULL,
+    UNIQUE(aula_id, docente_id),
+    FOREIGN KEY (aula_id) REFERENCES aulas(id) ON DELETE CASCADE,
+    FOREIGN KEY (docente_id) REFERENCES docentes(id) ON DELETE CASCADE
+);
+
 -- ESTUDIANTES
 CREATE TABLE estudiantes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
