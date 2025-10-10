@@ -88,4 +88,40 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Actualizar docente (datos básicos; no cambia password aquí)
+router.put("/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { nombre, email, telefono, cursos_que_ensena, correo_ingreso } = req.body;
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "ID inválido" });
+  }
+  if (!nombre || !email || !correo_ingreso) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "Faltan campos: nombre, email, correo_ingreso" });
+  }
+
+  try {
+    const db = await openDb();
+
+    const existe = await db.get("SELECT id FROM docentes WHERE id = ?", [id]);
+    if (!existe) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Docente no encontrado" });
+    }
+
+    await db.run(
+      `UPDATE docentes
+       SET nombre = ?, email = ?, telefono = ?, cursos_que_ensena = ?, correo_ingreso = ?
+       WHERE id = ?`,
+      [nombre, email, telefono ?? null, cursos_que_ensena ?? "", correo_ingreso, id]
+    );
+
+    return res.json({ id, nombre, email, telefono, cursos_que_ensena, correo_ingreso });
+  } catch (err) {
+    console.error(err);
+    // UNIQUE(email/correo_ingreso) podría romper
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
+  }
+});
+
+
 export default router;

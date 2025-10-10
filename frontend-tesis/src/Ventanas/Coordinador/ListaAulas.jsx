@@ -4,6 +4,8 @@ export default function ListaAulas() {
   const [aulas, setAulas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [editAula, setEditAula] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function cargar() {
@@ -24,7 +26,10 @@ export default function ListaAulas() {
   }, []);
 
   const handleEditar = (id) => {
-    alert(`Editar aula con ID: ${id} (pendiente)`);
+    const aula = aulas.find(a => a.id === id);
+    if (!aula) return;
+    // abre modal con copia editable
+    setEditAula({ id: aula.id, nombre: aula.nombre, grado: aula.grado, seccion: aula.seccion });
   };
 
   const handleEliminar = (id) => {
@@ -100,6 +105,91 @@ export default function ListaAulas() {
           </tbody>
         </table>
       )}
+
+      {/* Modal editar aula */}
+      {editAula && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Editar Aula</h3>
+
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-sm">Nombre</span>
+                <input
+                  className="mt-1 w-full border rounded p-2"
+                  value={editAula.nombre}
+                  onChange={(e) => setEditAula(prev => ({ ...prev, nombre: e.target.value }))}
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm">Grado</span>
+                <input
+                  className="mt-1 w-full border rounded p-2"
+                  value={editAula.grado}
+                  onChange={(e) => setEditAula(prev => ({ ...prev, grado: e.target.value }))}
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm">Sección</span>
+                <input
+                  className="mt-1 w-full border rounded p-2"
+                  value={editAula.seccion}
+                  onChange={(e) => setEditAula(prev => ({ ...prev, seccion: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                className="px-3 py-2 rounded border"
+                onClick={() => setEditAula(null)}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                className="px-3 py-2 rounded bg-blue-600 text-white disabled:opacity-60"
+                disabled={saving}
+                onClick={async () => {
+                  try {
+                    setSaving(true);
+                    const res = await fetch(
+                      import.meta.env.VITE_API_URL + `/aulas/${editAula.id}`,
+                      {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          nombre: editAula.nombre,
+                          grado: editAula.grado,
+                          seccion: editAula.seccion,
+                        }),
+                      }
+                    );
+                    if (!res.ok) {
+                      const t = await res.text();
+                      throw new Error(t || "No se pudo actualizar el aula");
+                    }
+                    const updated = await res.json(); // {id,nombre,grado,seccion}
+                    // Actualiza estado local sin re-fetch completo
+                    setAulas(prev =>
+                      prev.map(a => (a.id === updated.id ? { ...a, ...updated } : a))
+                    );
+                    setEditAula(null);
+                  } catch (e) {
+                    alert("Error: " + e.message);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
+
   );
 }

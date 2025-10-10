@@ -92,7 +92,7 @@ router.post("/", async (req, res) => {
     return res.status(201).json({ message: "Aula registrada", id: aulaId });
   } catch (err) {
     console.error(err);
-    if (db) { try { await db.exec("ROLLBACK"); } catch {} }
+    if (db) { try { await db.exec("ROLLBACK"); } catch { } }
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
@@ -176,7 +176,7 @@ router.post("/:aulaId/tutores", async (req, res) => {
     return res.status(201).json({ message: "Tutores asignados", agregados: nuevos });
   } catch (err) {
     console.error(err);
-    if (db) { try { await db.exec("ROLLBACK"); } catch {} }
+    if (db) { try { await db.exec("ROLLBACK"); } catch { } }
     return res.status(400).json({ error: "VALIDATION_ERROR", message: err.message });
   }
 });
@@ -199,6 +199,38 @@ router.delete("/:aulaId/tutores/:docenteId", async (req, res) => {
       return res.status(404).json({ error: "NOT_FOUND", message: "No había asignación para eliminar" });
     }
     return res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
+  }
+});
+
+// Actualizar aula (nombre, grado, seccion)
+router.put("/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { nombre, grado, seccion } = req.body;
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "ID inválido" });
+  }
+  if (!nombre || !grado || !seccion) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "Faltan campos: nombre, grado, seccion" });
+  }
+
+  try {
+    const db = await openDb();
+
+    const existe = await db.get("SELECT id FROM aulas WHERE id = ?", [id]);
+    if (!existe) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Aula no encontrada" });
+    }
+
+    await db.run(
+      "UPDATE aulas SET nombre = ?, grado = ?, seccion = ? WHERE id = ?",
+      [nombre, grado, seccion, id]
+    );
+
+    return res.json({ id, nombre, grado, seccion });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
