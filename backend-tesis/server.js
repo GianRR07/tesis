@@ -11,6 +11,8 @@ import aulasRoutes from "./routes/aulas.js";
 import estudiantesRoutes from "./routes/estudiantes.js";
 import examenesRoutes from "./routes/examenes.js";
 import evaluacionesRoutes from "./routes/evaluaciones.js";
+import authRoutes from "./routes/auth.js";
+
 
 import { migrateIfNeeded } from "./migrate.js";
 
@@ -29,6 +31,8 @@ app.use("/aulas", aulasRoutes);
 app.use("/estudiantes", estudiantesRoutes);
 app.use("/examenes", examenesRoutes);
 app.use("/evaluaciones", evaluacionesRoutes);
+app.use("/auth", authRoutes);
+
 
 // Arranque con migración automática
 async function start() {
