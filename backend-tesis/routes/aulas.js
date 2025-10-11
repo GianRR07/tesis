@@ -3,7 +3,7 @@ import { openDb } from "../db.js";
 
 const router = express.Router();
 
-// Listar aulas (incluye lista de tutores por aula)
+// Listar aulas (incluye tutores y cursos del aula)
 router.get("/", async (req, res) => {
   try {
     const db = await openDb();
@@ -18,8 +18,8 @@ router.get("/", async (req, res) => {
       ORDER BY a.id DESC
     `);
 
-    // Adjunta tutores por aula
     for (const aula of aulas) {
+      // Tutores
       const tutores = await db.all(`
         SELECT d.id, d.nombre
         FROM aula_tutores at
@@ -28,6 +28,21 @@ router.get("/", async (req, res) => {
         ORDER BY d.nombre ASC
       `, [aula.id]);
       aula.tutores = tutores; // [{id, nombre}]
+
+      // Cursos del aula (con docente asignado al curso, si existe)
+      const cursos = await db.all(`
+        SELECT 
+          c.id,
+          c.nombre,
+          ac.docente_id,
+          d.nombre AS docente_nombre
+        FROM aulas_cursos ac
+        JOIN cursos c ON c.id = ac.curso_id
+        LEFT JOIN docentes d ON d.id = ac.docente_id
+        WHERE ac.aula_id = ?
+        ORDER BY c.nombre ASC
+      `, [aula.id]);
+      aula.cursos = cursos; // [{id, nombre, docente_id, docente_nombre}]
     }
 
     res.json(aulas);

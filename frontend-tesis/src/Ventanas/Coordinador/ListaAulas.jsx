@@ -53,10 +53,12 @@ export default function ListaAulas() {
               <th className="border px-3 py-2">Nombre</th>
               <th className="border px-3 py-2">Grado</th>
               <th className="border px-3 py-2">Sección</th>
+              <th className="border px-3 py-2">Cursos del aula</th>
               <th className="border px-3 py-2">Tutores</th>
               <th className="border px-3 py-2">Opciones</th>
             </tr>
           </thead>
+
           <tbody>
             {aulas.length === 0 ? (
               <tr>
@@ -70,6 +72,23 @@ export default function ListaAulas() {
                   <td className="border px-3 py-2">{aula.nombre}</td>
                   <td className="border px-3 py-2">{aula.grado}</td>
                   <td className="border px-3 py-2">{aula.seccion}</td>
+                  <td className="border px-3 py-2">
+                    {!aula.cursos || aula.cursos.length === 0 ? (
+                      "—"
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {aula.cursos.map((c) => (
+                          <span
+                            key={c.id}
+                            className="inline-block px-2 py-1 text-xs rounded bg-blue-100 border border-blue-300"
+                            title={c.docente_nombre ? `Docente: ${c.docente_nombre}` : ""}
+                          >
+                            {c.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td className="border px-3 py-2">
                     {!aula.tutores || aula.tutores.length === 0 ? (
                       "—"
