@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import RoleSelectModal from "./RoleSelectModal";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -7,6 +8,9 @@ export default function Login() {
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
   const [err,   setErr] = useState("");
+
+  // NUEVO: control del modal de selección de rol
+  const [selectOpen, setSelectOpen] = useState(false);
 
   const handleLogin = async () => {
     setErr("");
@@ -35,24 +39,19 @@ export default function Login() {
         return;
       }
 
-      // userType === "docente"
       const tieneDocente = data?.roles?.docente?.aulas?.length > 0;
       const tieneTutor   = data?.roles?.tutor?.aulas?.length > 0;
 
       if (tieneDocente && tieneTutor) {
-        // Si cumple ambas, preguntamos a dónde ir
-        const irTutor = window.confirm(
-          "Tienes acceso como DOCENTE y como TUTOR.\n\nAceptar: ir a vista Tutor\nCancelar: ir a vista Docente"
-        );
-        navigate(irTutor ? "/tutor" : "/docente");
+        // Mostrar modal con botones Docente/Tutor
+        setSelectOpen(true);
+        return;
       } else if (tieneTutor) {
         navigate("/tutor");
       } else if (tieneDocente) {
         navigate("/docente");
       } else {
-        // Es docente pero no tiene aulas como docente ni como tutor
         alert("Ingreso correcto, pero no tienes aulas asignadas aún.");
-        // Puedes dirigir a una página neutra o al home
         navigate("/");
       }
     } catch (e) {
@@ -110,6 +109,17 @@ export default function Login() {
           <button className="border border-[#004d8f] text-[#004d8f] py-2 rounded-lg hover:bg-[#004d8f] hover:text-white transition">
             Contáctanos
           </button>
+
+          {/* Modal para elegir rol cuando tiene Docente y Tutor */}
+          <RoleSelectModal
+            open={selectOpen}
+            onClose={() => setSelectOpen(false)}
+            onSelect={(role) => {
+              setSelectOpen(false);
+              if (role === "docente") navigate("/docente");
+              else if (role === "tutor") navigate("/tutor");
+            }}
+          />
         </div>
       </div>
     </div>
