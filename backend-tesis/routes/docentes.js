@@ -124,4 +124,65 @@ router.put("/:id", async (req, res) => {
 });
 
 
+// ===== NUEVO: Aulas donde enseña un docente =====
+// GET /docentes/:id/aulas  (?cursoId=opcional)
+router.get("/:id/aulas", async (req, res) => {
+  const docenteId = Number(req.params.id);
+  const { cursoId } = req.query;
+
+  if (!Number.isInteger(docenteId)) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "docenteId inválido" });
+  }
+
+  try {
+    const db = await openDb();
+    const params = [docenteId];
+    let sql = `
+      SELECT a.id, a.nombre, a.grado, a.seccion,
+             GROUP_CONCAT(DISTINCT c.nombre) AS cursos
+      FROM aulas_cursos ac
+      JOIN aulas a ON a.id = ac.aula_id
+      JOIN cursos c ON c.id = ac.curso_id
+      WHERE ac.docente_id = ?
+    `;
+    if (cursoId) { sql += ` AND ac.curso_id = ?`; params.push(Number(cursoId)); }
+    sql += ` GROUP BY a.id ORDER BY a.grado, a.seccion`;
+
+    const aulas = await db.all(sql, params);
+    res.json(aulas);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "INTERNAL_ERROR", message: e.message });
+  }
+});
+
+// ===== NUEVO: Estudiantes de un aula (vía docente) =====
+// GET /docentes/:id/estudiantes?aulaId=NN
+router.get("/:id/estudiantes", async (req, res) => {
+  const aulaId = Number(req.query.aulaId);
+  if (!Number.isInteger(aulaId)) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "aulaId requerido y numérico" });
+  }
+
+  try {
+    const db = await openDb();
+    const estudiantes = await db.all(
+      `
+      SELECT e.id, e.nombre
+      FROM estudiantes_aulas ea
+      JOIN estudiantes e ON e.id = ea.estudiante_id
+      WHERE ea.aula_id = ?
+      ORDER BY e.nombre
+      `,
+      [aulaId]
+    );
+    res.json(estudiantes);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "INTERNAL_ERROR", message: e.message });
+  }
+});
+
+
+
 export default router;

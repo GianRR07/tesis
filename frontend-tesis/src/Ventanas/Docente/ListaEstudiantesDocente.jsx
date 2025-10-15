@@ -1,19 +1,52 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaChartLine } from "react-icons/fa";
+import { getDocenteIdPreferido } from "../../utils/session";
+
 
 export default function ListaEstudiantesDocente() {
-  const aulas = ["Aula 1", "Aula 2", "Aula 3"];
+  const docenteId = getDocenteIdPreferido();
 
-  const estudiantesPorAula = {
-    "Aula 1": ["Carlos Pérez", "María Gómez", "Ana Torres"],
-    "Aula 2": ["Luis Fernández", "Sofía Ríos", "Miguel Castro"],
-    "Aula 3": ["Laura Ramírez", "Pedro López", "Valeria Sánchez"],
-  };
-
+  const [aulas, setAulas] = useState([]);           // [{id,nombre,grado,seccion,cursos}]
   const [aulaSeleccionada, setAulaSeleccionada] = useState("");
-  const estudiantes = aulaSeleccionada
-    ? estudiantesPorAula[aulaSeleccionada]
-    : [];
+  const [estudiantes, setEstudiantes] = useState([]); // [{id,nombre}]
+  const [err, setErr] = useState("");
+
+  // Cargar aulas donde enseña el docente
+  useEffect(() => {
+    async function cargarAulas() {
+      setErr("");
+      if (!docenteId) {
+        setErr("No se pudo identificar el docente actual.");
+        return;
+      }
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/docentes/${docenteId}/aulas`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "No se pudieron cargar las aulas.");
+        setAulas(data);
+      } catch (e) {
+        setErr(e.message);
+      }
+    }
+    cargarAulas();
+  }, [docenteId]);
+
+  // Cargar estudiantes del aula seleccionada
+  useEffect(() => {
+    async function cargarEstudiantes() {
+      setEstudiantes([]);
+      if (!aulaSeleccionada) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/docentes/${docenteId}/estudiantes?aulaId=${aulaSeleccionada}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "No se pudo cargar estudiantes.");
+        setEstudiantes(data);
+      } catch (e) {
+        setErr(e.message);
+      }
+    }
+    cargarEstudiantes();
+  }, [docenteId, aulaSeleccionada]);
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
@@ -30,9 +63,9 @@ export default function ListaEstudiantesDocente() {
           className="mt-1 w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
         >
           <option value="">Seleccione un aula</option>
-          {aulas.map((aula, index) => (
-            <option key={index} value={aula}>
-              {aula}
+          {aulas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.nombre} ({a.grado}-{a.seccion})
             </option>
           ))}
         </select>
@@ -50,8 +83,8 @@ export default function ListaEstudiantesDocente() {
             </thead>
             <tbody>
               {estudiantes.map((est, index) => (
-                <tr key={index} className="border-t">
-                  <td className="p-2">{est}</td>
+                <tr key={est.id} className="border-t">
+                  <td className="p-2">{est.nombre}</td>
                   <td className="p-2 text-center">
                     <button className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-[#004d8f] rounded hover:bg-blue-200">
                       <FaChartLine /> Ver métricas

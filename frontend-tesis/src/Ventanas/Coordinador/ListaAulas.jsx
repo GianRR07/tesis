@@ -39,6 +39,10 @@ export default function ListaAulas() {
     }
   };
 
+  const docenteTag = (name) => (name && name.trim().length
+    ? `-${name.trim().charAt(0).toLowerCase()}`
+    : "");
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-gray-700">Lista de Aulas</h2>
@@ -62,9 +66,8 @@ export default function ListaAulas() {
           <tbody>
             {aulas.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-500">
-                  No hay aulas registradas.
-                </td>
+                <td colSpan={6} className="text-center py-6 text-gray-500">No hay aulas registradas.</td>
+
               </tr>
             ) : (
               aulas.map((aula) => (
@@ -83,7 +86,7 @@ export default function ListaAulas() {
                             className="inline-block px-2 py-1 text-xs rounded bg-blue-100 border border-blue-300"
                             title={c.docente_nombre ? `Docente: ${c.docente_nombre}` : ""}
                           >
-                            {c.nombre}
+                            {c.nombre}{docenteTag(c.docente_nombre)}
                           </span>
                         ))}
                       </div>
