@@ -1,9 +1,19 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import ListaEstudiantesDocente from "./ListaEstudiantesDocente";
 import EvaluarExamenDocente from "./EvaluarExamenDocente";
 
 export default function DocenteOpciones() {
   const [active, setActive] = useState("inicio");
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("session");
+    navigate("/login");
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -18,21 +28,19 @@ export default function DocenteOpciones() {
         <aside className="w-56 bg-[#004d8f] p-4 flex flex-col justify-between">
           <div className="space-y-2">
             <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${
-                active === "estudiantes"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "estudiantes"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
+                }`}
               onClick={() => setActive("estudiantes")}
             >
               Lista de estudiantes
             </button>
             <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${
-                active === "evaluar"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "evaluar"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
+                }`}
               onClick={() => setActive("evaluar")}
             >
               Evaluar Examen
@@ -40,9 +48,13 @@ export default function DocenteOpciones() {
           </div>
 
           {/* Botón de logout */}
-          <button className="w-full rounded-full px-4 py-2 font-semibold bg-white text-red-600 hover:bg-red-100 transition">
+          <button
+            onClick={handleLogout}
+            className="w-full rounded-full px-4 py-2 font-semibold bg-white text-red-600 hover:bg-red-100 transition"
+          >
             Cerrar Sesión
           </button>
+
         </aside>
 
         {/* Contenido principal */}

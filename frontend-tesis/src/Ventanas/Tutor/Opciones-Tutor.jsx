@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import GestionarAulaTutor from "./GestionarAulaTutor";
 import ListaEstudiantes from "./ListaEstudiantes";
 import GestionExamen from "./GestionExamen";
@@ -6,6 +8,13 @@ import EvaluarExamen from "./EvaluarExamen";
 
 export default function OpcionesTutor() {
   const [active, setActive] = useState("inicio");
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("session");
+    navigate("/");
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -20,41 +29,37 @@ export default function OpcionesTutor() {
         <aside className="w-56 bg-[#004d8f] p-4 flex flex-col justify-between">
           <div className="space-y-2">
             <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${
-                active === "aula"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "aula"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
+                }`}
               onClick={() => setActive("aula")}
             >
               Gestionar aula
             </button>
             <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${
-                active === "estudiantes"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "estudiantes"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
+                }`}
               onClick={() => setActive("estudiantes")}
             >
               Lista de estudiantes
             </button>
             <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${
-                active === "examen"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "examen"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
+                }`}
               onClick={() => setActive("examen")}
             >
               Gestión de Examen
             </button>
             <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${
-                active === "evaluar"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
-              }`}
+              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "evaluar"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
+                }`}
               onClick={() => setActive("evaluar")}
             >
               Evaluar Examen
@@ -62,9 +67,13 @@ export default function OpcionesTutor() {
           </div>
 
           {/* Botón de logout */}
-          <button className="w-full rounded-full px-4 py-2 font-semibold bg-white text-red-600 hover:bg-red-100 transition">
+          <button
+            onClick={handleLogout}
+            className="w-full rounded-full px-4 py-2 font-semibold bg-white text-red-600 hover:bg-red-100 transition"
+          >
             Cerrar Sesión
           </button>
+
         </aside>
 
         {/* Contenido principal */}
