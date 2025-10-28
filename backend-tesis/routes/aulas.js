@@ -5,7 +5,7 @@ const router = express.Router();
 
 /**
  * GET /aulas
- * Lista aulas con tutores (desde aula_tutores.tutor_id) y cursos (con docente asignado si hay).
+ * Lista aulas con tutores (desde aulas_docentes_tutores -> docentes) y cursos (con docente asignado si hay).
  */
 router.get("/", async (req, res) => {
   try {
@@ -22,14 +22,14 @@ router.get("/", async (req, res) => {
     `);
 
     for (const aula of aulas) {
-      // TUTORES (nuevo esquema con tutor_id)
+      // TUTORES (docentes en rol de tutor)
       const tutores = await db.all(
         `
-        SELECT t.id, t.nombre
-        FROM aula_tutores at
-        JOIN tutores t ON t.id = at.tutor_id
-        WHERE at.aula_id = ?
-        ORDER BY t.nombre ASC
+        SELECT d.id, d.nombre
+        FROM aulas_docentes_tutores adt
+        JOIN docentes d ON d.id = adt.docente_id
+        WHERE adt.aula_id = ?
+        ORDER BY d.nombre ASC
         `,
         [aula.id]
       );
@@ -114,7 +114,7 @@ router.post("/", async (req, res) => {
 
 /**
  * GET /aulas/:aulaId/tutores
- * Lista tutores del aula
+ * Lista tutores (docentes en rol de tutor) del aula
  */
 router.get("/:aulaId/tutores", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
@@ -125,11 +125,11 @@ router.get("/:aulaId/tutores", async (req, res) => {
     const db = await openDb();
     const tutores = await db.all(
       `
-      SELECT t.id, t.nombre
-      FROM aula_tutores at
-      JOIN tutores t ON t.id = at.tutor_id
-      WHERE at.aula_id = ?
-      ORDER BY t.nombre ASC
+      SELECT d.id, d.nombre
+      FROM aulas_docentes_tutores adt
+      JOIN docentes d ON d.id = adt.docente_id
+      WHERE adt.aula_id = ?
+      ORDER BY d.nombre ASC
       `,
       [aulaId]
     );
@@ -143,28 +143,39 @@ router.get("/:aulaId/tutores", async (req, res) => {
 /**
  * POST /aulas/:aulaId/tutores
  * Asigna tutores (bulk) respetando máximo 2 por aula.
- * body: { tutoresIds: number[] }
+ * body: { docentesIds: number[] }  // también acepta tutoresIds por compatibilidad
  */
 router.post("/:aulaId/tutores", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
-  const { tutoresIds } = req.body;
+
+  // ✅ acepta ambos nombres de payload (compatibilidad)
+  const { docentesIds, tutoresIds } = req.body ?? {};
+  const idsInput = Array.isArray(docentesIds) ? docentesIds : tutoresIds;
+
+  // Debug temporal (puedes quitarlo)
+  // console.log("POST /aulas/:aulaId/tutores BODY =", req.body);
 
   if (!Number.isInteger(aulaId)) {
     return res.status(400).json({ error: "VALIDATION_ERROR", message: "aulaId inválido" });
   }
-  if (!Array.isArray(tutoresIds) || tutoresIds.length === 0) {
-    return res.status(400).json({ error: "VALIDATION_ERROR", message: "tutoresIds es requerido (array)" });
+  if (!Array.isArray(idsInput) || idsInput.length === 0) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "docentesIds/tutoresIds es requerido (array)" });
   }
-  const ids = tutoresIds.map(Number).filter((n) => Number.isInteger(n) && n > 0);
-  if (ids.length !== tutoresIds.length) {
-    return res.status(400).json({ error: "VALIDATION_ERROR", message: "Hay tutor(es) con ID inválido" });
+
+  const ids = idsInput.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (ids.length !== idsInput.length) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "Hay ID(s) inválido(s)" });
   }
 
   const db = await openDb();
   await db.exec("BEGIN");
   try {
-    const actuales = await db.all("SELECT tutor_id FROM aula_tutores WHERE aula_id = ?", [aulaId]);
-    const yaAsignados = new Set(actuales.map((r) => r.tutor_id));
+    // actuales
+    const actuales = await db.all(
+      "SELECT docente_id FROM aulas_docentes_tutores WHERE aula_id = ?",
+      [aulaId]
+    );
+    const yaAsignados = new Set(actuales.map((r) => r.docente_id));
     const nuevos = ids.filter((id) => !yaAsignados.has(id));
 
     const total = actuales.length + nuevos.length;
@@ -172,14 +183,19 @@ router.post("/:aulaId/tutores", async (req, res) => {
       throw new Error(`Máximo 2 tutores por aula. Ya hay ${actuales.length}, intentas agregar ${nuevos.length}.`);
     }
 
+    // validar que existan en docentes
     if (nuevos.length > 0) {
       const placeholders = nuevos.map(() => "?").join(",");
-      const validos = await db.all(`SELECT id FROM tutores WHERE id IN (${placeholders})`, nuevos);
-      if (validos.length !== nuevos.length) throw new Error("Algún tutor no existe");
+      const validos = await db.all(`SELECT id FROM docentes WHERE id IN (${placeholders})`, nuevos);
+      if (validos.length !== nuevos.length) throw new Error("Algún docente no existe");
     }
 
-    for (const tId of nuevos) {
-      await db.run("INSERT INTO aula_tutores (aula_id, tutor_id) VALUES (?, ?)", [aulaId, tId]);
+    // insertar
+    for (const dId of nuevos) {
+      await db.run(
+        "INSERT OR IGNORE INTO aulas_docentes_tutores (aula_id, docente_id) VALUES (?, ?)",
+        [aulaId, dId]
+      );
     }
 
     await db.exec("COMMIT");
@@ -193,18 +209,22 @@ router.post("/:aulaId/tutores", async (req, res) => {
 
 /**
  * DELETE /aulas/:aulaId/tutores/:tutorId
- * Quita un tutor del aula
+ * Quita un tutor (docente en rol de tutor) del aula
  */
 router.delete("/:aulaId/tutores/:tutorId", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
-  const tutorId = Number(req.params.tutorId);
-  if (!Number.isInteger(aulaId) || !Number.isInteger(tutorId)) {
+  const docenteId = Number(req.params.tutorId); // mantenemos el nombre de la ruta por compatibilidad
+
+  if (!Number.isInteger(aulaId) || !Number.isInteger(docenteId)) {
     return res.status(400).json({ error: "VALIDATION_ERROR", message: "IDs inválidos" });
   }
 
   try {
     const db = await openDb();
-    const r = await db.run("DELETE FROM aula_tutores WHERE aula_id = ? AND tutor_id = ?", [aulaId, tutorId]);
+    const r = await db.run(
+      "DELETE FROM aulas_docentes_tutores WHERE aula_id = ? AND docente_id = ?",
+      [aulaId, docenteId]
+    );
     if (r.changes === 0) {
       return res.status(404).json({ error: "NOT_FOUND", message: "No había asignación para eliminar" });
     }

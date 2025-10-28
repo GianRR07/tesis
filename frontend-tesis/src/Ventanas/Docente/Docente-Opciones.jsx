@@ -11,7 +11,7 @@ export default function DocenteOpciones() {
 
   const handleLogout = () => {
     localStorage.removeItem("session");
-    navigate("/login");
+    navigate("/");
   };
 
 
