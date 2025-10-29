@@ -23,16 +23,19 @@ router.get("/", async (req, res) => {
 
     for (const aula of aulas) {
       // TUTORES (docentes en rol de tutor)
+            // TUTORES (desde tabla original aula_tutores + tutores)
       const tutores = await db.all(
         `
-        SELECT d.id, d.nombre
-        FROM aulas_docentes_tutores adt
-        JOIN docentes d ON d.id = adt.docente_id
-        WHERE adt.aula_id = ?
-        ORDER BY d.nombre ASC
+        SELECT t.id, t.nombre
+        FROM aula_tutores at
+        JOIN tutores t ON t.id = at.tutor_id
+        WHERE at.aula_id = ?
+        ORDER BY t.nombre ASC
         `,
         [aula.id]
       );
+      aula.tutores = tutores; // [{id, nombre}]
+
       aula.tutores = tutores; // [{id, nombre}]
 
       // CURSOS del aula (docente asignado al curso si existe)
@@ -123,16 +126,17 @@ router.get("/:aulaId/tutores", async (req, res) => {
   }
   try {
     const db = await openDb();
-    const tutores = await db.all(
+        const tutores = await db.all(
       `
-      SELECT d.id, d.nombre
-      FROM aulas_docentes_tutores adt
-      JOIN docentes d ON d.id = adt.docente_id
-      WHERE adt.aula_id = ?
-      ORDER BY d.nombre ASC
+      SELECT t.id, t.nombre
+      FROM aula_tutores at
+      JOIN tutores t ON t.id = at.tutor_id
+      WHERE at.aula_id = ?
+      ORDER BY t.nombre ASC
       `,
       [aulaId]
     );
+
     res.json(tutores);
   } catch (err) {
     console.error(err);
@@ -148,12 +152,9 @@ router.get("/:aulaId/tutores", async (req, res) => {
 router.post("/:aulaId/tutores", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
 
-  // ✅ acepta ambos nombres de payload (compatibilidad)
+  // Acepta ambos nombres por compatibilidad
   const { docentesIds, tutoresIds } = req.body ?? {};
   const idsInput = Array.isArray(docentesIds) ? docentesIds : tutoresIds;
-
-  // Debug temporal (puedes quitarlo)
-  // console.log("POST /aulas/:aulaId/tutores BODY =", req.body);
 
   if (!Number.isInteger(aulaId)) {
     return res.status(400).json({ error: "VALIDATION_ERROR", message: "aulaId inválido" });
@@ -170,36 +171,51 @@ router.post("/:aulaId/tutores", async (req, res) => {
   const db = await openDb();
   await db.exec("BEGIN");
   try {
-    // actuales
-    const actuales = await db.all(
-      "SELECT docente_id FROM aulas_docentes_tutores WHERE aula_id = ?",
-      [aulaId]
-    );
-    const yaAsignados = new Set(actuales.map((r) => r.docente_id));
-    const nuevos = ids.filter((id) => !yaAsignados.has(id));
+    // Tutores ya asignados para contar (máx 2)
+    const actuales = await db.all("SELECT tutor_id FROM aula_tutores WHERE aula_id = ?", [aulaId]);
+    const totalActual = actuales.length;
 
-    const total = actuales.length + nuevos.length;
-    if (total > 2) {
-      throw new Error(`Máximo 2 tutores por aula. Ya hay ${actuales.length}, intentas agregar ${nuevos.length}.`);
-    }
+    const agregadosTutorIds = [];
 
-    // validar que existan en docentes
-    if (nuevos.length > 0) {
-      const placeholders = nuevos.map(() => "?").join(",");
-      const validos = await db.all(`SELECT id FROM docentes WHERE id IN (${placeholders})`, nuevos);
-      if (validos.length !== nuevos.length) throw new Error("Algún docente no existe");
-    }
-
-    // insertar
-    for (const dId of nuevos) {
-      await db.run(
-        "INSERT OR IGNORE INTO aulas_docentes_tutores (aula_id, docente_id) VALUES (?, ?)",
-        [aulaId, dId]
+    for (const docenteId of ids) {
+      // 1) Docente origen
+      const d = await db.get(
+        "SELECT id, nombre, email FROM docentes WHERE id = ?",
+        [docenteId]
       );
+      if (!d) throw new Error(`Docente id=${docenteId} no existe`);
+
+      // 2) Tutor con el mismo email (crear si no existe)
+      let t = await db.get("SELECT id FROM tutores WHERE email = ?", [d.email]);
+      if (!t) {
+        const r = await db.run(
+          "INSERT INTO tutores (nombre, email) VALUES (?, ?)",
+          [d.nombre, d.email]
+        );
+        t = { id: r.lastID };
+      }
+
+      // 3) Evitar duplicado y respetar máximo 2
+      const ya = await db.get(
+        "SELECT 1 AS ok FROM aula_tutores WHERE aula_id = ? AND tutor_id = ?",
+        [aulaId, t.id]
+      );
+      if (ya) continue; // ya estaba
+
+      if (totalActual + agregadosTutorIds.length >= 2) {
+        throw new Error("Máximo 2 tutores por aula.");
+      }
+
+      // 4) Insertar relación
+      await db.run(
+        "INSERT INTO aula_tutores (aula_id, tutor_id) VALUES (?, ?)",
+        [aulaId, t.id]
+      );
+      agregadosTutorIds.push(t.id);
     }
 
     await db.exec("COMMIT");
-    return res.status(201).json({ message: "Tutores asignados", agregados: nuevos });
+    return res.status(201).json({ message: "Tutores asignados", agregados: agregadosTutorIds });
   } catch (err) {
     console.error(err);
     try { await db.exec("ROLLBACK"); } catch {}
@@ -207,23 +223,24 @@ router.post("/:aulaId/tutores", async (req, res) => {
   }
 });
 
+
 /**
  * DELETE /aulas/:aulaId/tutores/:tutorId
  * Quita un tutor (docente en rol de tutor) del aula
  */
 router.delete("/:aulaId/tutores/:tutorId", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
-  const docenteId = Number(req.params.tutorId); // mantenemos el nombre de la ruta por compatibilidad
+  const tutorId = Number(req.params.tutorId);
 
-  if (!Number.isInteger(aulaId) || !Number.isInteger(docenteId)) {
+  if (!Number.isInteger(aulaId) || !Number.isInteger(tutorId)) {
     return res.status(400).json({ error: "VALIDATION_ERROR", message: "IDs inválidos" });
   }
 
   try {
     const db = await openDb();
     const r = await db.run(
-      "DELETE FROM aulas_docentes_tutores WHERE aula_id = ? AND docente_id = ?",
-      [aulaId, docenteId]
+      "DELETE FROM aula_tutores WHERE aula_id = ? AND tutor_id = ?",
+      [aulaId, tutorId]
     );
     if (r.changes === 0) {
       return res.status(404).json({ error: "NOT_FOUND", message: "No había asignación para eliminar" });
@@ -234,6 +251,7 @@ router.delete("/:aulaId/tutores/:tutorId", async (req, res) => {
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
+
 
 /**
  * PUT /aulas/:id

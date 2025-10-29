@@ -7,7 +7,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
-  const [err,   setErr] = useState("");
+  const [err, setErr] = useState("");
 
   // NUEVO: control del modal de selección de rol
   const [selectOpen, setSelectOpen] = useState(false);
@@ -39,21 +39,33 @@ export default function Login() {
         return;
       }
 
-      const tieneDocente = data?.roles?.docente?.aulas?.length > 0;
-      const tieneTutor   = data?.roles?.tutor?.aulas?.length > 0;
+      const esDocente = !!data?.roles?.docente; // presencia del rol
+      const esTutor = !!data?.roles?.tutor;   // presencia del rol
 
-      if (tieneDocente && tieneTutor) {
-        // Mostrar modal con botones Docente/Tutor
+      // (opcional) info de aulas si la quieres para mensajes
+      const aulasDocente = data?.roles?.docente?.aulas ?? [];
+      const aulasTutor = data?.roles?.tutor?.aulas ?? [];
+
+      if (esDocente && esTutor) {
+        // Tiene ambos roles → siempre ofrecer elección
         setSelectOpen(true);
         return;
-      } else if (tieneTutor) {
-        navigate("/tutor");
-      } else if (tieneDocente) {
-        navigate("/docente");
-      } else {
-        alert("Ingreso correcto, pero no tienes aulas asignadas aún.");
-        navigate("/");
       }
+
+      if (esTutor) {
+        navigate("/tutor");
+        return;
+      }
+
+      if (esDocente) {
+        navigate("/docente");
+        return;
+      }
+
+      // Sin roles conocidos
+      alert("Ingreso correcto, pero tu usuario no tiene rol asignado aún.");
+      navigate("/");
+
     } catch (e) {
       setErr(e.message);
     } finally {

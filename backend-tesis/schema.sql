@@ -104,12 +104,4 @@ CREATE TABLE evaluaciones (
 
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS aulas_docentes_tutores (
-  aula_id     INTEGER NOT NULL,
-  docente_id  INTEGER NOT NULL,
-  PRIMARY KEY (aula_id, docente_id),
-  FOREIGN KEY (aula_id)    REFERENCES aulas(id)    ON DELETE CASCADE,
-  FOREIGN KEY (docente_id) REFERENCES docentes(id) ON DELETE CASCADE
-);
 
-CREATE INDEX IF NOT EXISTS idx_adt_aula ON aulas_docentes_tutores(aula_id);

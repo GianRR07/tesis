@@ -10,7 +10,7 @@ const router = express.Router();
  * body: { email, password }
  * - Si email=coordinador@edu.pe y password=soyadmin => coordinador
  * - Si coincide con docente (correo_ingreso + password_hash) =>
- *   devuelve roles: aulas donde enseña (docente) y aulas donde es tutor (si tiene registro en tutores).
+ *   devuelve roles: aulas donde enseña (docente) y aulas donde es tutor (emparejando por email en tutores/aula_tutores).
  */
 router.post("/login", async (req, res) => {
   try {
@@ -61,30 +61,25 @@ router.post("/login", async (req, res) => {
       [docente.id]
     );
 
-    // 4) AULAS donde es TUTOR (si existe un registro en TUTORES con MISMO EMAIL)
-    //    (si no existe, devolveremos lista vacía)
-    const tutor = await db.get(
-      `SELECT id FROM tutores WHERE email = ?`,
-      [docente.email]
+    // 4) AULAS donde es TUTOR (docente en rol de tutor)
+    //    Empareja por email (case-insensitive) en tutores/aula_tutores.
+    const emailNorm = (docente.email || "").trim();
+    const aulasTutor = await db.all(
+      `
+      SELECT a.id, a.nombre, a.grado, a.seccion
+      FROM aula_tutores at
+      JOIN tutores t ON t.id = at.tutor_id
+      JOIN aulas   a ON a.id = at.aula_id
+      WHERE LOWER(t.email) = LOWER(?)
+      ORDER BY a.grado, a.seccion
+      `,
+      [emailNorm]
     );
 
-    let aulasTutor = [];
-    if (tutor?.id) {
-      aulasTutor = await db.all(
-        `
-        SELECT a.id, a.nombre, a.grado, a.seccion
-        FROM aula_tutores at
-        JOIN aulas a ON a.id = at.aula_id
-        WHERE at.tutor_id = ?
-        ORDER BY a.grado, a.seccion
-        `,
-        [tutor.id]
-      );
-    }
-
+    // Siempre devolvemos las claves 'docente' y 'tutor' con arrays (aunque estén vacíos)
     const roles = {
-      docente: { aulas: aulasDocente }, // []
-      tutor: { aulas: aulasTutor },     // []
+      docente: { aulas: aulasDocente },
+      tutor:   { aulas: aulasTutor   },
     };
 
     return res.json({
