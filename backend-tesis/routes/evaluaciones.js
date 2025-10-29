@@ -3,6 +3,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { openDb } from "../db.js";
+import evaluarAutomaticoLLM from "../services/evaluador_llm.js";
+
 
 const router = express.Router();
 
@@ -67,5 +69,20 @@ router.post("/", upload.single("archivo_resuelto"), async (req, res) => {
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
+
+router.post("/:id/auto", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: "VALIDATION_ERROR", message: "id inválido" });
+    }
+    const out = await evaluarAutomaticoLLM(id);
+    return res.json(out);
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ error: "EVALUATION_ERROR", message: err.message });
+  }
+});
+
 
 export default router;

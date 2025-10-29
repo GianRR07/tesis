@@ -13,8 +13,8 @@ import estudiantesRoutes from "./routes/estudiantes.js";
 import examenesRoutes from "./routes/examenes.js";
 import evaluacionesRoutes from "./routes/evaluaciones.js";
 import authRoutes from "./routes/auth.js";
-import examenesRouter from "./routes/examenes.js";
-import evaluacionesRouter from "./routes/evaluaciones.js";
+
+
 
 
 import { migrateIfNeeded } from "./migrate.js";
@@ -37,8 +37,7 @@ app.use("/estudiantes", estudiantesRoutes);
 app.use("/examenes", examenesRoutes);
 app.use("/evaluaciones", evaluacionesRoutes);
 app.use("/auth", authRoutes);
-app.use("/examenes", examenesRouter);
-app.use("/evaluaciones", evaluacionesRouter);
+
 
 
 // Arranque con migración automática

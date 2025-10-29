@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { getDocenteIdPreferido } from "../../utils/session";
 
+
+
 export default function EvaluarExamenDocente() {
   const docenteId = getDocenteIdPreferido();
 
@@ -19,6 +21,9 @@ export default function EvaluarExamenDocente() {
   const [archivoExamenAlumno, setArchivoExamenAlumno] = useState(null); // PDF resuelto
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
+
+  const [detallePreguntas, setDetallePreguntas] = useState(null);
+
 
   // 1) Cargar aulas donde enseña el DOCENTE
   useEffect(() => {
@@ -55,30 +60,30 @@ export default function EvaluarExamenDocente() {
 
     // filtrar cursos del aula que son de este docente
     // Cursos del aula para este docente (maneja string vs array)
-(async () => {
-  try {
-    const aula = aulas.find(a => a.id === Number(aulaId));
+    (async () => {
+      try {
+        const aula = aulas.find(a => a.id === Number(aulaId));
 
-    if (Array.isArray(aula?.cursos)) {
-      // Caso ideal: ya viene como array [{id,nombre,docente_id,...}]
-      const cursos = aula.cursos.filter(c => c.docente_id === Number(docenteId));
-      setCursosAula(cursos);
-    } else {
-      // Fallback: /docentes/:id/aulas trae cursos como string (GROUP_CONCAT)
-      // Pedimos /aulas (que sí trae cursos como array) y filtramos allí.
-      const rAll = await fetch(`${import.meta.env.VITE_API_URL}/aulas`);
-      const allAulas = await rAll.json();
-      if (!rAll.ok) throw new Error(allAulas?.message || "No se pudieron cargar aulas detalladas.");
+        if (Array.isArray(aula?.cursos)) {
+          // Caso ideal: ya viene como array [{id,nombre,docente_id,...}]
+          const cursos = aula.cursos.filter(c => c.docente_id === Number(docenteId));
+          setCursosAula(cursos);
+        } else {
+          // Fallback: /docentes/:id/aulas trae cursos como string (GROUP_CONCAT)
+          // Pedimos /aulas (que sí trae cursos como array) y filtramos allí.
+          const rAll = await fetch(`${import.meta.env.VITE_API_URL}/aulas`);
+          const allAulas = await rAll.json();
+          if (!rAll.ok) throw new Error(allAulas?.message || "No se pudieron cargar aulas detalladas.");
 
-      const aulaDetalle = allAulas.find(x => x.id === Number(aulaId));
-      const cursosDet = (aulaDetalle?.cursos || []).filter(c => c.docente_id === Number(docenteId));
-      setCursosAula(cursosDet);
-    }
-  } catch (e) {
-    setErr(e.message);
-    setCursosAula([]);
-  }
-})();
+          const aulaDetalle = allAulas.find(x => x.id === Number(aulaId));
+          const cursosDet = (aulaDetalle?.cursos || []).filter(c => c.docente_id === Number(docenteId));
+          setCursosAula(cursosDet);
+        }
+      } catch (e) {
+        setErr(e.message);
+        setCursosAula([]);
+      }
+    })();
 
 
     // cargar estudiantes del aula
@@ -99,10 +104,10 @@ export default function EvaluarExamenDocente() {
     try {
       setErr("");
       setOk("");
-      if (!aulaId)  throw new Error("Selecciona un salón (aula).");
+      if (!aulaId) throw new Error("Selecciona un salón (aula).");
       if (!cursoId) throw new Error("Selecciona un curso.");
       if (!examenNombre.trim()) throw new Error("Ingresa un nombre para el examen.");
-      if (!archivoExamenBase) throw new Error("Carga el PDF del examen base (preguntas).");
+      if (!archivoExamenBase) throw new Error("Carga el PDF del examen con respuestas correctas.");
 
       const form = new FormData();
       form.append("nombre", examenNombre.trim());
@@ -116,7 +121,7 @@ export default function EvaluarExamenDocente() {
       const data = await r.json();
       if (!r.ok) throw new Error(data?.message || "No se pudo crear el examen.");
       setExamenId(data.id); // guardar id del examen creado
-      setOk(`Examen creado con ID ${data.id}. Ya puedes cargar el examen resuelto del alumno.`);
+      setOk(`Examen (respuestas correctas) registrado con ID ${data.id}. Ya puedes cargar el examen del alumno.`);
     } catch (e) {
       setErr(e.message);
     }
@@ -142,9 +147,22 @@ export default function EvaluarExamenDocente() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
-      setOk(`Evaluación registrada (ID ${data.id}). Nota: ${data.nota ?? "pendiente"}.`);
-      // opcional: limpiar archivo del alumno
+
+      // ➊ Ejecutar evaluación automática con el LLM
+      const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
+        method: "POST",
+      });
+      const resAuto = await rAuto.json();
+      if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
+
+      // ➋ Mostrar nota + veredicto
+      setOk(`Evaluación registrada (ID ${data.id}). Nota: ${resAuto.nota} / 20. ${resAuto.veredicto}`);
+      setDetallePreguntas(resAuto?.detalle?.preguntas ?? []);
+
+
+      // ➌ (Opcional) limpiar archivo del alumno
       setArchivoExamenAlumno(null);
+
     } catch (e) {
       setErr(e.message);
     }
@@ -199,7 +217,7 @@ export default function EvaluarExamenDocente() {
           disabled={!cursoId}
         />
 
-        <label className="block font-medium text-gray-700 mt-4">Cargue el examen (PDF con preguntas):</label>
+        <label className="block font-medium text-gray-700 mt-4">Cargue el examen (PDF con preguntas resueltas):</label>
         <input
           type="file"
           accept=".pdf"
@@ -213,7 +231,7 @@ export default function EvaluarExamenDocente() {
           onClick={subirExamenBase}
           disabled={!cursoId || !examenNombre.trim() || !archivoExamenBase}
         >
-          Crear examen base
+          Seleccionar PDF como el examen de respuestas correctas
         </button>
       </div>
 
@@ -254,6 +272,32 @@ export default function EvaluarExamenDocente() {
       </div>
 
       {ok && <div className="mt-3 text-green-700">{ok}</div>}
+      {Array.isArray(detallePreguntas) && detallePreguntas.length > 0 && (
+        <div className="mt-4">
+          <h4 className="font-semibold mb-2">Detalle por pregunta</h4>
+          <table className="w-full border border-gray-300 rounded-md text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">#</th>
+                <th className="p-2 text-left">Correcta</th>
+                <th className="p-2 text-left">Alumno</th>
+                <th className="p-2 text-left">Acierto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detallePreguntas.map((p) => (
+                <tr key={p.n} className="border-t">
+                  <td className="p-2">{p.n}</td>
+                  <td className="p-2">{p.correcta}</td>
+                  <td className="p-2">{p.alumno ?? "—"}</td>
+                  <td className="p-2">{p.acierto ? "✔️" : "❌"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {err && <div className="mt-3 text-red-700">{err}</div>}
     </div>
   );
