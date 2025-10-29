@@ -1,5 +1,67 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { getDocenteIdPreferido } from "../../utils/session";
+
+
+// Modal de resultado
+function ResultadoModal({ open, onClose, data }) {
+  if (!open) return null;
+  const { nota, veredicto, preguntas = [] } = data || {};
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden">
+        <div className="px-6 py-4 bg-[#004d8f] text-white">
+          <h3 className="text-lg font-semibold">Resultado de la evaluación</h3>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-xl font-bold text-[#004d8f]">
+              Nota: {nota} / 20
+            </div>
+            <button
+              className="px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-100"
+              onClick={onClose}
+            >
+              Cerrar
+            </button>
+          </div>
+
+          <p className="text-gray-700">{veredicto}</p>
+
+          {Array.isArray(preguntas) && preguntas.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">Detalle por pregunta</h4>
+              <div className="max-h-72 overflow-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 text-left">#</th>
+                      <th className="p-2 text-left">Correcta</th>
+                      <th className="p-2 text-left">Alumno</th>
+                      <th className="p-2 text-left">Acierto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preguntas.map((p) => (
+                      <tr key={p.n} className="border-t">
+                        <td className="p-2">{p.n}</td>
+                        <td className="p-2">{p.correcta}</td>
+                        <td className="p-2">{p.alumno ?? "—"}</td>
+                        <td className="p-2">{p.acierto ? "✔️" : "❌"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 
 
@@ -22,7 +84,13 @@ export default function EvaluarExamenDocente() {
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
 
-  const [detallePreguntas, setDetallePreguntas] = useState(null);
+
+  // Modal de resultado
+  const [modalOpen, setModalOpen] = useState(false);
+  const [resultado, setResultado] = useState(null);
+
+  // Ref para limpiar el input file del alumno
+  const fileAlumnoRef = useRef(null);
 
 
   // 1) Cargar aulas donde enseña el DOCENTE
@@ -127,6 +195,16 @@ export default function EvaluarExamenDocente() {
     }
   }
 
+  function cerrarModalYLimpiar() {
+  setModalOpen(false);
+  setResultado(null);
+  // limpiar alumno
+  setEstudianteId("");
+  // limpiar archivo del alumno
+  setArchivoExamenAlumno(null);
+  if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
+}
+
   // 4) Subir EXAMEN RESUELTO DEL ALUMNO (PDF) -> crea registro en `evaluaciones`
   async function subirExamenAlumno() {
     try {
@@ -148,20 +226,25 @@ export default function EvaluarExamenDocente() {
       const data = await r.json();
       if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
 
-      // ➊ Ejecutar evaluación automática con el LLM
       const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
         method: "POST",
       });
       const resAuto = await rAuto.json();
       if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
 
-      // ➋ Mostrar nota + veredicto
-      setOk(`Evaluación registrada (ID ${data.id}). Nota: ${resAuto.nota} / 20. ${resAuto.veredicto}`);
-      setDetallePreguntas(resAuto?.detalle?.preguntas ?? []);
+      // ➋ Abrir modal con los datos
+      setResultado({
+        nota: resAuto.nota,
+        veredicto: resAuto.veredicto,
+        preguntas: resAuto?.detalle?.preguntas ?? [],
+      });
+      setModalOpen(true);
 
-
-      // ➌ (Opcional) limpiar archivo del alumno
+      // ➌ Limpieza inmediata del archivo (y luego, al cerrar modal, del select)
       setArchivoExamenAlumno(null);
+      if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
+      // opcional: deja 'ok' vacío si ya no lo usarás abajo
+      setOk("");
 
     } catch (e) {
       setErr(e.message);
@@ -255,6 +338,7 @@ export default function EvaluarExamenDocente() {
       <div className="mb-6">
         <label className="block font-medium text-gray-700">Cargar examen del alumno (PDF):</label>
         <input
+          ref={fileAlumnoRef}
           type="file"
           accept=".pdf"
           className="mt-1 w-full p-2 border rounded-md"
@@ -272,33 +356,15 @@ export default function EvaluarExamenDocente() {
       </div>
 
       {ok && <div className="mt-3 text-green-700">{ok}</div>}
-      {Array.isArray(detallePreguntas) && detallePreguntas.length > 0 && (
-        <div className="mt-4">
-          <h4 className="font-semibold mb-2">Detalle por pregunta</h4>
-          <table className="w-full border border-gray-300 rounded-md text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-2 text-left">#</th>
-                <th className="p-2 text-left">Correcta</th>
-                <th className="p-2 text-left">Alumno</th>
-                <th className="p-2 text-left">Acierto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detallePreguntas.map((p) => (
-                <tr key={p.n} className="border-t">
-                  <td className="p-2">{p.n}</td>
-                  <td className="p-2">{p.correcta}</td>
-                  <td className="p-2">{p.alumno ?? "—"}</td>
-                  <td className="p-2">{p.acierto ? "✔️" : "❌"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      
 
       {err && <div className="mt-3 text-red-700">{err}</div>}
+
+      <ResultadoModal
+        open={modalOpen}
+        onClose={cerrarModalYLimpiar}
+        data={resultado}
+      />
     </div>
   );
 }
