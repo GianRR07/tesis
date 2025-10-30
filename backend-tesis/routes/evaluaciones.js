@@ -76,7 +76,22 @@ router.post("/:id/auto", async (req, res) => {
     if (!Number.isInteger(id)) {
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "id inválido" });
     }
+
+    // Llamar al evaluador automático (Hermes)
     const out = await evaluarAutomaticoLLM(id);
+
+    // out debería devolver algo como:
+    // { nota: 14.5, veredicto: "El alumno necesita refuerzo en el tema de microbiología" }
+
+    const db = await openDb();
+
+    // Guardamos los resultados en la tabla evaluaciones
+    await db.run(
+      `UPDATE evaluaciones SET nota = ?, veredicto = ? WHERE id = ?`,
+      [out.nota ?? null, out.veredicto ?? null, id]
+    );
+
+    console.log(`🧠 Evaluación ${id} actualizada con nota/veredicto.`);
     return res.json(out);
   } catch (err) {
     console.error(err);
@@ -85,4 +100,73 @@ router.post("/:id/auto", async (req, res) => {
 });
 
 
+// --- tus endpoints POST ya existentes aquí ---
+
+// 📊 NUEVO: obtener promedio general por estudiante
+router.get("/metricas/estudiantes", async (req, res) => {
+  try {
+    const db = await openDb();
+    const result = await db.all(`
+      SELECT 
+        e.id AS estudiante_id,
+        e.nombre AS estudiante,
+        ROUND(AVG(ev.nota), 2) AS promedio_general
+      FROM estudiantes e
+      JOIN evaluaciones ev ON e.id = ev.estudiante_id
+      GROUP BY e.id
+      ORDER BY promedio_general DESC
+    `);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "DB_ERROR", message: err.message });
+  }
+});
+
+// 📊 NUEVO: promedio por curso de cada estudiante
+router.get("/metricas/curso", async (req, res) => {
+  try {
+    const db = await openDb();
+    const result = await db.all(`
+      SELECT 
+        e.id AS estudiante_id,
+        e.nombre AS estudiante,
+        c.nombre AS curso,
+        ROUND(AVG(ev.nota), 2) AS promedio_curso
+      FROM evaluaciones ev
+      JOIN examenes ex ON ev.examen_id = ex.id
+      JOIN cursos c ON ex.curso_id = c.id
+      JOIN estudiantes e ON ev.estudiante_id = e.id
+      GROUP BY e.id, c.id
+      ORDER BY e.nombre, c.nombre
+    `);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "DB_ERROR", message: err.message });
+  }
+});
+
+// 📊 NUEVO: promedio por aula (rendimiento global)
+router.get("/metricas/aulas", async (req, res) => {
+  try {
+    const db = await openDb();
+    const result = await db.all(`
+      SELECT 
+        a.nombre AS aula,
+        ROUND(AVG(ev.nota), 2) AS promedio_aula
+      FROM evaluaciones ev
+      JOIN estudiantes e ON ev.estudiante_id = e.id
+      JOIN estudiantes_aulas ea ON e.id = ea.estudiante_id
+      JOIN aulas a ON ea.aula_id = a.id
+      GROUP BY a.id
+    `);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "DB_ERROR", message: err.message });
+  }
+});
+
 export default router;
+
