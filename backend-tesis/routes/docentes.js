@@ -184,5 +184,64 @@ router.get("/:id/estudiantes", async (req, res) => {
 });
 
 
+router.get("/:id/resultados", async (req, res) => {
+  try {
+    const docenteId = Number(req.params.id);
+    const aulaId = Number(req.query.aulaId);
+
+    if (!Number.isInteger(docenteId) || !Number.isInteger(aulaId)) {
+      return res.status(400).json({ error: "VALIDATION_ERROR", message: "docenteId y aulaId deben ser enteros" });
+    }
+
+    const db = await openDb(); // <<<<<<<<<<<<<<<<<<<<<< Aquí se define db
+
+    const evaluaciones = await db.all(
+      `
+      SELECT 
+        ev.id AS evaluacion_id,
+        e.id AS estudiante_id,
+        e.nombre AS estudiante_nombre,
+        c.nombre AS curso_nombre,
+        ed.resumen_json
+      FROM evaluaciones ev
+      JOIN evaluacion_detalles ed ON ev.id = ed.evaluacion_id
+      JOIN examenes ex ON ev.examen_id = ex.id
+      JOIN cursos c ON ex.curso_id = c.id
+      JOIN estudiantes e ON ev.estudiante_id = e.id
+      JOIN estudiantes_aulas ea ON e.id = ea.estudiante_id
+      WHERE ev.docente_id = ?
+        AND ea.aula_id = ?
+      ORDER BY e.nombre, c.nombre;
+      `,
+      [docenteId, aulaId]
+    );
+
+    const resultados = evaluaciones.map(ev => {
+      const resumen = JSON.parse(ev.resumen_json);
+      const preguntas_correctas = resumen.preguntas.filter(p => p.acierto).map(p => p.numero);
+      const preguntas_marcadas = resumen.preguntas.map(p => ({ numero: p.numero, marcado: p.alumno }));
+
+      return {
+        evaluacion_id: ev.evaluacion_id,
+        estudiante_id: ev.estudiante_id,
+        estudiante_nombre: ev.estudiante_nombre,
+        curso_nombre: ev.curso_nombre,
+        nota: resumen.nota,
+        total_correctas: resumen.correctas,
+        total_incorrectas: resumen.total - resumen.correctas,
+        preguntas_correctas,
+        preguntas_marcadas
+      };
+    });
+
+    res.json(resultados);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "DB_ERROR", message: err.message });
+  }
+});
+
+
 
 export default router;

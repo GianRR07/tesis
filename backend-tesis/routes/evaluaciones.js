@@ -29,22 +29,25 @@ const upload = multer({
 });
 
 // POST /evaluaciones  (multipart)
-// fields: examen_id, estudiante_id, archivo_resuelto (pdf)
+// fields: examen_id, estudiante_id, docente_id, archivo_resuelto (pdf)
 router.post("/", upload.single("archivo_resuelto"), async (req, res) => {
   try {
     const examen_id = Number(req.body?.examen_id);
     const estudiante_id = Number(req.body?.estudiante_id);
+    const docente_id = Number(req.body?.docente_id); // <-- nuevo
 
-    if (!Number.isInteger(examen_id) || !Number.isInteger(estudiante_id)) {
+    // Validaciones
+    if (!Number.isInteger(examen_id) || !Number.isInteger(estudiante_id) || !Number.isInteger(docente_id)) {
       if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(400).json({ error: "VALIDATION_ERROR", message: "examen_id y estudiante_id requeridos" });
+      return res.status(400).json({ error: "VALIDATION_ERROR", message: "examen_id, estudiante_id y docente_id requeridos" });
     }
     if (!req.file) {
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "archivo_resuelto (PDF) es requerido" });
     }
 
     const db = await openDb();
-    // validar existencia
+
+    // Validar existencia de examen, estudiante y docente
     const ex = await db.get("SELECT id FROM examenes WHERE id = ?", [examen_id]);
     if (!ex) {
       fs.unlinkSync(req.file.path);
@@ -55,20 +58,28 @@ router.post("/", upload.single("archivo_resuelto"), async (req, res) => {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "estudiante_id no existe" });
     }
+    const doc = await db.get("SELECT id FROM docentes WHERE id = ?", [docente_id]);
+    if (!doc) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: "VALIDATION_ERROR", message: "docente_id no existe" });
+    }
 
+    // Insertar la evaluación con docente_id
     const r = await db.run(
-      `INSERT INTO evaluaciones (estudiante_id, examen_id, nota, archivo_resuelto)
-       VALUES (?, ?, NULL, ?)`,
-      [estudiante_id, examen_id, path.join("uploads", path.basename(req.file.path))]
+      `INSERT INTO evaluaciones (estudiante_id, examen_id, docente_id, nota, archivo_resuelto)
+       VALUES (?, ?, ?, NULL, ?)`,
+      [estudiante_id, examen_id, docente_id, path.join("uploads", path.basename(req.file.path))]
     );
 
     return res.status(201).json({ id: r.lastID, nota: null });
+
   } catch (err) {
     console.error(err);
     try { if (req.file) fs.unlinkSync(req.file.path); } catch {}
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
+
 
 router.post("/:id/auto", async (req, res) => {
   try {
