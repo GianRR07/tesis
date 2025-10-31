@@ -202,6 +202,7 @@ router.get("/:id/resultados", async (req, res) => {
         e.id AS estudiante_id,
         e.nombre AS estudiante_nombre,
         c.nombre AS curso_nombre,
+        ex.nombre AS examen_nombre,
         ed.resumen_json
       FROM evaluaciones ev
       JOIN evaluacion_detalles ed ON ev.id = ed.evaluacion_id
@@ -226,6 +227,7 @@ router.get("/:id/resultados", async (req, res) => {
         estudiante_id: ev.estudiante_id,
         estudiante_nombre: ev.estudiante_nombre,
         curso_nombre: ev.curso_nombre,
+         examen_nombre: ev.examen_nombre,
         nota: resumen.nota,
         total_correctas: resumen.correctas,
         total_incorrectas: resumen.total - resumen.correctas,
