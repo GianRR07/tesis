@@ -205,51 +205,68 @@ export default function EvaluarExamenDocente() {
   if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
 }
 
-  // 4) Subir EXAMEN RESUELTO DEL ALUMNO (PDF) -> crea registro en `evaluaciones`
-  async function subirExamenAlumno() {
-    try {
-      setErr("");
-      setOk("");
-      if (!examenId) throw new Error("Primero crea el examen base (sube el PDF de preguntas).");
-      if (!estudianteId) throw new Error("Selecciona un alumno.");
-      if (!archivoExamenAlumno) throw new Error("Carga el PDF del examen resuelto por el alumno.");
+ // 4) Subir EXAMEN RESUELTO DEL ALUMNO (PDF) -> crea registro en `evaluaciones`
+async function subirExamenAlumno() {
+  try {
+    setErr("");
+    setOk("");
 
-      const form = new FormData();
-      form.append("examen_id", String(examenId));
-      form.append("estudiante_id", String(estudianteId));
-      form.append("archivo_resuelto", archivoExamenAlumno); // campo esperado por backend
+    if (!examenId) throw new Error("Primero crea el examen base (sube el PDF de preguntas).");
+    if (!estudianteId) throw new Error("Selecciona un alumno.");
+    if (!archivoExamenAlumno) throw new Error("Carga el PDF del examen resuelto por el alumno.");
 
-      const r = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones`, {
-        method: "POST",
-        body: form,
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
+    // LOGS para depuración
+    console.log("===== SUBIENDO EXAMEN DEL ALUMNO =====");
+    console.log("docenteId:", docenteId);
+    console.log("aulaId:", aulaId);
+    console.log("cursoId:", cursoId);
+    console.log("estudianteId:", estudianteId);
+    console.log("examenId:", examenId);
+    console.log("archivoExamenAlumno:", archivoExamenAlumno);
 
-      const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
-        method: "POST",
-      });
-      const resAuto = await rAuto.json();
-      if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
+    const form = new FormData();
+    form.append("examen_id", String(examenId));
+    form.append("estudiante_id", String(estudianteId));
+    form.append("docente_id", String(docenteId)); // <-- agregado
+    form.append("archivo_resuelto", archivoExamenAlumno);
 
-      // ➋ Abrir modal con los datos
-      setResultado({
-        nota: resAuto.nota,
-        veredicto: resAuto.veredicto,
-        preguntas: resAuto?.detalle?.preguntas ?? [],
-      });
-      setModalOpen(true);
-
-      // ➌ Limpieza inmediata del archivo (y luego, al cerrar modal, del select)
-      setArchivoExamenAlumno(null);
-      if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
-      // opcional: deja 'ok' vacío si ya no lo usarás abajo
-      setOk("");
-
-    } catch (e) {
-      setErr(e.message);
+    // Opcional: log del contenido de FormData (solo claves, el archivo no se imprime completo)
+    for (let [key, value] of form.entries()) {
+      console.log("FormData:", key, value);
     }
+
+    const r = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones`, {
+      method: "POST",
+      body: form,
+    });
+
+    const data = await r.json();
+    if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
+
+    const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
+      method: "POST",
+    });
+
+    const resAuto = await rAuto.json();
+    if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
+
+    setResultado({
+      nota: resAuto.nota,
+      veredicto: resAuto.veredicto,
+      preguntas: resAuto?.detalle?.preguntas ?? [],
+    });
+    setModalOpen(true);
+
+    // limpieza del archivo
+    setArchivoExamenAlumno(null);
+    if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
+    setOk("");
+
+  } catch (e) {
+    setErr(e.message);
   }
+}
+
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
