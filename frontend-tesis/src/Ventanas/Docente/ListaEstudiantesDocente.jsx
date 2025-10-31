@@ -13,8 +13,7 @@ export default function ListaEstudiantesDocente() {
   const [err, setErr] = useState("");
 
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [cursosModal, setCursosModal] = useState([]);
-  const [puntajesModal, setPuntajesModal] = useState([]);
+  const [datosModal, setDatosModal] = useState([]); // ahora usamos un solo estado
 
   // Cargar aulas
   useEffect(() => {
@@ -36,7 +35,7 @@ export default function ListaEstudiantesDocente() {
     cargarAulas();
   }, [docenteId]);
 
-  // Cargar estudiantes y sus notas automáticamente al seleccionar aula
+  // Cargar estudiantes y resultados al seleccionar aula
   useEffect(() => {
     async function cargarEstudiantesYNotas() {
       setEstudiantes([]);
@@ -62,6 +61,7 @@ export default function ListaEstudiantesDocente() {
           if (!resultadosPorEst[r.estudiante_id]) resultadosPorEst[r.estudiante_id] = [];
           resultadosPorEst[r.estudiante_id].push({
             curso: r.curso_nombre,
+            examen: r.examen_nombre,
             nota: r.nota,
             correctas: r.total_correctas,
             incorrectas: r.total_incorrectas,
@@ -88,10 +88,9 @@ export default function ListaEstudiantesDocente() {
     }));
   };
 
-  // Función para abrir modal con los datos del estudiante
-  const abrirModal = (cursos, puntajes) => {
-    setCursosModal(cursos);
-    setPuntajesModal(puntajes);
+  // Abrir modal con datos combinados
+  const abrirModal = (datos) => {
+    setDatosModal(datos);
     setModalAbierto(true);
   };
 
@@ -120,8 +119,6 @@ export default function ListaEstudiantesDocente() {
         <div className="space-y-6">
           {estudiantes.map(est => {
             const notas = resultados[est.id] || [];
-            const cursos = notas.map(n => n.curso);
-            const puntajes = notas.map(n => n.nota ?? 0);
 
             return (
               <div
@@ -143,7 +140,9 @@ export default function ListaEstudiantesDocente() {
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center gap-2">
                               <FaBook className="text-[#004d8f]" />
-                              <span className="font-medium">{n.curso}</span>
+                              <span className="font-medium">
+                                {n.curso} — <span className="italic text-gray-600">{n.examen}</span>
+                              </span>
                             </div>
                             <div className="flex items-center gap-4">
                               <span className="font-semibold text-[#004d8f]">
@@ -184,7 +183,15 @@ export default function ListaEstudiantesDocente() {
 
                     {/* Botón para abrir modal con RadarChart */}
                     <button
-                      onClick={() => abrirModal(cursos, puntajes)}
+                      onClick={() =>
+                        abrirModal(
+                          notas.map(n => ({
+                            curso: n.curso,
+                            examen: n.examen,
+                            nota: n.nota ?? 0,
+                          }))
+                        )
+                      }
                       className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                     >
                       Ver rendimiento
@@ -210,7 +217,7 @@ export default function ListaEstudiantesDocente() {
               &times;
             </button>
             <h2 className="text-xl font-bold text-[#004d8f] mb-4">Rendimiento del estudiante</h2>
-            <RadarChart cursos={cursosModal} puntajes={puntajesModal} />
+            <RadarChart datos={datosModal} />
           </div>
         </div>
       )}

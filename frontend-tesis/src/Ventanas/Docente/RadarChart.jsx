@@ -19,13 +19,24 @@ ChartJS.register(
   Legend
 );
 
-export default function RadarChart({ cursos, puntajes }) {
+/**
+ * Props esperadas:
+ *  datos = [
+ *    { curso: "Matemática", examen: "Examen Bimestral 1", nota: 15 },
+ *    { curso: "Comunicación", examen: "Evaluación Final", nota: 18 },
+ *  ]
+ */
+export default function RadarChart({ datos = [] }) {
+  // Generar etiquetas y datos
+  const labels = datos.map(d => `${d.curso} — ${d.examen}`);
+  const valores = datos.map(d => d.nota ?? 0);
+
   const data = {
-    labels: cursos,
+    labels,
     datasets: [
       {
         label: "Promedio de notas",
-        data: puntajes,
+        data: valores,
         backgroundColor: "rgba(0, 77, 143, 0.4)",
         borderColor: "#004d8f",
         borderWidth: 2,
@@ -38,7 +49,7 @@ export default function RadarChart({ cursos, puntajes }) {
     scales: {
       r: {
         min: 0,
-        max: 20, // Asumiendo nota sobre 20
+        max: 20, // Escala de notas (0-20)
         ticks: {
           stepSize: 2,
           color: "#666",
@@ -49,7 +60,14 @@ export default function RadarChart({ cursos, puntajes }) {
         pointLabels: {
           color: "#004d8f",
           font: {
-            size: 14,
+            size: 13,
+          },
+          // Permite cortar texto largo
+          callback: function (label) {
+            if (label.length > 25) {
+              return label.substring(0, 25) + "...";
+            }
+            return label;
           },
         },
       },
@@ -61,6 +79,12 @@ export default function RadarChart({ cursos, puntajes }) {
           font: {
             size: 14,
           },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          title: (items) => labels[items[0].dataIndex],
+          label: (item) => `Nota: ${item.formattedValue}`,
         },
       },
     },
