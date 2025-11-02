@@ -51,23 +51,44 @@ export default function ListaEstudiantesDocente() {
         const estudiantesNormalizados = dataEst.map(e => ({ ...e, id: Number(e.id) }));
         setEstudiantes(estudiantesNormalizados);
 
+        // 1) GET original (detalle completo: correctas/incorrectas/preguntas)
         const resNotas = await fetch(
           `${import.meta.env.VITE_API_URL}/docentes/${docenteId}/resultados?aulaId=${aulaSeleccionada}`
         );
         const dataNotas = await resNotas.json();
+        if (!resNotas.ok) throw new Error(dataNotas?.message || "No se pudieron cargar resultados.");
+
+        // 2) GET de evaluaciones solo para traer veredicto (sin romper el 1)
+        const resVerd = await fetch(
+          `${import.meta.env.VITE_API_URL}/evaluaciones/resultados?docenteId=${docenteId}&aulaId=${aulaSeleccionada}`
+        );
+        const dataVerd = await resVerd.json();
+        if (!resVerd.ok) throw new Error(dataVerd?.message || "No se pudieron cargar veredictos.");
+
+        // Indexa veredictos por clave estable: estudiante|curso|examen
+        const mapaVeredictos = new Map(
+          dataVerd.map(v => {
+            const clave = `${v.estudiante_id}|${v.curso_nombre}|${v.examen_nombre}`;
+            return [clave, v.veredicto ?? null];
+          })
+        );
 
         const resultadosPorEst = {};
         dataNotas.forEach(r => {
           if (!resultadosPorEst[r.estudiante_id]) resultadosPorEst[r.estudiante_id] = [];
+          const clave = `${r.estudiante_id}|${r.curso_nombre}|${r.examen_nombre}`;
+          const veredicto = mapaVeredictos.get(clave) ?? null;
+
           resultadosPorEst[r.estudiante_id].push({
             curso: r.curso_nombre,
             examen: r.examen_nombre,
             nota: r.nota,
-            correctas: r.total_correctas,
-            incorrectas: r.total_incorrectas,
+            correctas: r.total_correctas ?? 0,
+            incorrectas: r.total_incorrectas ?? 0,
             preguntas_correctas: r.preguntas_correctas || [],
             preguntas_marcadas: r.preguntas_marcadas || [],
             mostrarDetalle: false,
+            veredicto,
           });
         });
         setResultados(resultadosPorEst);
@@ -189,6 +210,7 @@ export default function ListaEstudiantesDocente() {
                             curso: n.curso,
                             examen: n.examen,
                             nota: n.nota ?? 0,
+                            veredicto: n.veredicto ?? null,
                           }))
                         )
                       }
@@ -209,18 +231,26 @@ export default function ListaEstudiantesDocente() {
       {/* Modal */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full relative">
+          <div
+            className="bg-white rounded-lg p-8 w-[90%] max-w-5xl relative shadow-xl overflow-auto"
+            style={{ maxHeight: "90vh" }}
+          >
             <button
               onClick={() => setModalAbierto(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl font-bold"
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
             >
               &times;
             </button>
-            <h2 className="text-xl font-bold text-[#004d8f] mb-4">Rendimiento del estudiante</h2>
-            <RadarChart datos={datosModal} />
+            <h2 className="text-2xl font-bold text-[#004d8f] mb-6 text-center">
+              Rendimiento del estudiante
+            </h2>
+            <div className="w-full h-[450px] flex items-center justify-center">
+              <RadarChart datos={datosModal} />
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

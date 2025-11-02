@@ -179,5 +179,51 @@ router.get("/metricas/aulas", async (req, res) => {
   }
 });
 
+// GET /evaluaciones/resultados?docenteId=4&aulaId=123
+router.get("/resultados", async (req, res) => {
+  try {
+    const docenteId = Number(req.query.docenteId);
+    const aulaId = Number(req.query.aulaId);
+
+    if (!Number.isInteger(docenteId) || !Number.isInteger(aulaId)) {
+      return res.status(400).json({ error: "VALIDATION_ERROR", message: "docenteId y aulaId requeridos" });
+    }
+
+    const db = await openDb();
+
+    // 🔧 NOTA: Sin JOIN a evaluaciones_resultados para evitar 500 si la tabla no existe
+    const rows = await db.all(`
+      SELECT
+        ev.estudiante_id,
+        ev.nota,
+        ev.veredicto                         AS veredicto,
+        ex.nombre                            AS examen_nombre,
+        c.nombre                             AS curso_nombre
+      FROM evaluaciones ev
+      JOIN examenes ex              ON ev.examen_id = ex.id
+      JOIN cursos c                 ON ex.curso_id = c.id
+      JOIN estudiantes e            ON ev.estudiante_id = e.id
+      JOIN estudiantes_aulas ea     ON e.id = ea.estudiante_id
+      WHERE ev.docente_id = ?
+        AND ea.aula_id = ?
+      ORDER BY e.id, ex.id
+    `, [docenteId, aulaId]);
+
+    // Opcional: añade campos por defecto para evitar undefined en el front
+    const result = rows.map(r => ({
+      ...r,
+      total_correctas: null,
+      total_incorrectas: null,
+      preguntas_correctas: null,
+      preguntas_marcadas: null,
+    }));
+
+    return res.json(result);
+  } catch (err) {
+    console.error("ERROR /evaluaciones/resultados:", err.message);
+    return res.status(500).json({ error: "DB_ERROR", message: err.message });
+  }
+});
+
 export default router;
 
