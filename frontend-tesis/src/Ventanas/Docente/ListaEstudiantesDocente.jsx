@@ -36,69 +36,57 @@ export default function ListaEstudiantesDocente() {
   }, [docenteId]);
 
   // Cargar estudiantes y resultados al seleccionar aula
-  useEffect(() => {
-    async function cargarEstudiantesYNotas() {
-      setEstudiantes([]);
-      setResultados({});
-      if (!aulaSeleccionada) return;
+  // Cargar estudiantes y resultados al seleccionar aula
+useEffect(() => {
+  async function cargarEstudiantesYNotas() {
+    setEstudiantes([]);
+    setResultados({});
+    if (!aulaSeleccionada) return;
 
-      try {
-        const resEst = await fetch(
-          `${import.meta.env.VITE_API_URL}/docentes/${docenteId}/estudiantes?aulaId=${aulaSeleccionada}`
-        );
-        const dataEst = await resEst.json();
-        if (!resEst.ok) throw new Error(dataEst?.message || "No se pudo cargar estudiantes.");
-        const estudiantesNormalizados = dataEst.map(e => ({ ...e, id: Number(e.id) }));
-        setEstudiantes(estudiantesNormalizados);
+    try {
+      // 1) Estudiantes del aula
+      const resEst = await fetch(
+        `${import.meta.env.VITE_API_URL}/docentes/${docenteId}/estudiantes?aulaId=${aulaSeleccionada}`
+      );
+      const dataEst = await resEst.json();
+      if (!resEst.ok) throw new Error(dataEst?.message || "No se pudo cargar estudiantes.");
+      const estudiantesNormalizados = dataEst.map(e => ({ ...e, id: Number(e.id) }));
+      setEstudiantes(estudiantesNormalizados);
 
-        // 1) GET original (detalle completo: correctas/incorrectas/preguntas)
-        const resNotas = await fetch(
-          `${import.meta.env.VITE_API_URL}/docentes/${docenteId}/resultados?aulaId=${aulaSeleccionada}`
-        );
-        const dataNotas = await resNotas.json();
-        if (!resNotas.ok) throw new Error(dataNotas?.message || "No se pudieron cargar resultados.");
+      // 2) ÚNICO fetch: trae todo con parciales
+      const resFull = await fetch(
+        `${import.meta.env.VITE_API_URL}/evaluaciones/resultados?docenteId=${docenteId}&aulaId=${aulaSeleccionada}`
+      );
+      const dataFull = await resFull.json();
+      if (!resFull.ok) throw new Error(dataFull?.message || "No se pudieron cargar resultados.");
 
-        // 2) GET de evaluaciones solo para traer veredicto (sin romper el 1)
-        const resVerd = await fetch(
-          `${import.meta.env.VITE_API_URL}/evaluaciones/resultados?docenteId=${docenteId}&aulaId=${aulaSeleccionada}`
-        );
-        const dataVerd = await resVerd.json();
-        if (!resVerd.ok) throw new Error(dataVerd?.message || "No se pudieron cargar veredictos.");
-
-        // Indexa veredictos por clave estable: estudiante|curso|examen
-        const mapaVeredictos = new Map(
-          dataVerd.map(v => {
-            const clave = `${v.estudiante_id}|${v.curso_nombre}|${v.examen_nombre}`;
-            return [clave, v.veredicto ?? null];
-          })
-        );
-
-        const resultadosPorEst = {};
-        dataNotas.forEach(r => {
-          if (!resultadosPorEst[r.estudiante_id]) resultadosPorEst[r.estudiante_id] = [];
-          const clave = `${r.estudiante_id}|${r.curso_nombre}|${r.examen_nombre}`;
-          const veredicto = mapaVeredictos.get(clave) ?? null;
-
-          resultadosPorEst[r.estudiante_id].push({
-            curso: r.curso_nombre,
-            examen: r.examen_nombre,
-            nota: r.nota,
-            correctas: r.total_correctas ?? 0,
-            incorrectas: r.total_incorrectas ?? 0,
-            preguntas_correctas: r.preguntas_correctas || [],
-            preguntas_marcadas: r.preguntas_marcadas || [],
-            mostrarDetalle: false,
-            veredicto,
-          });
+      // 3) Construir estructura por estudiante
+      const resultadosPorEst = {};
+      dataFull.forEach(r => {
+        if (!resultadosPorEst[r.estudiante_id]) resultadosPorEst[r.estudiante_id] = [];
+        resultadosPorEst[r.estudiante_id].push({
+          curso: r.curso_nombre,
+          examen: r.examen_nombre,
+          nota: r.nota ?? null,
+          veredicto: r.veredicto ?? null,
+          correctas: r.total_correctas ?? 0,
+          parciales: r.total_parciales ?? 0,
+          incorrectas: r.total_incorrectas ?? 0,
+          preguntas_correctas: Array.isArray(r.preguntas_correctas) ? r.preguntas_correctas : [],
+          preguntas_parciales: Array.isArray(r.preguntas_parciales) ? r.preguntas_parciales : [],
+          preguntas_marcadas: Array.isArray(r.preguntas_marcadas) ? r.preguntas_marcadas : [],
+          mostrarDetalle: false,
         });
-        setResultados(resultadosPorEst);
+      });
 
-      } catch (e) {
-        setErr(e.message);
-      }
+      setResultados(resultadosPorEst);
+    } catch (e) {
+      setErr(e.message);
     }
-    cargarEstudiantesYNotas();
-  }, [docenteId, aulaSeleccionada]);
+  }
+  cargarEstudiantesYNotas();
+}, [docenteId, aulaSeleccionada]);
+
 
   const toggleDetalle = (estudianteId, index) => {
     setResultados(prev => ({
@@ -167,13 +155,13 @@ export default function ListaEstudiantesDocente() {
                             </div>
                             <div className="flex items-center gap-4">
                               <span className="font-semibold text-[#004d8f]">
-                                Nota: {n.nota ? n.nota.toFixed(2) : "—"} | {n.correctas} ✔️ / {n.incorrectas} ❌
+                                Nota: {n.nota ? n.nota.toFixed(2) : "—"} | {n.correctas} ✔️ / {(n.parciales ?? 0)} ◐ / {n.incorrectas} ❌
                               </span>
                               <button
                                 className="text-blue-600 underline text-xs"
                                 onClick={() => toggleDetalle(est.id, i)}
                               >
-                                Ver respuestas marcadas
+                                Ver detalle de respuestas
                               </button>
                             </div>
                           </div>
@@ -188,6 +176,17 @@ export default function ListaEstudiantesDocente() {
                                   ))}
                                 </ul>
                               </div>
+
+                              <div>
+                                <strong>Parciales:</strong>
+                                <ul>
+                                  {(n.preguntas_parciales ?? []).map(num => (
+                                    <li key={num}>Pregunta {num}</li>
+                                  ))}
+                                </ul>
+                              </div>
+
+
                               <div>
                                 <strong>Correctas:</strong>
                                 <ul>

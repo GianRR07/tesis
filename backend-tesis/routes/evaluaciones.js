@@ -180,6 +180,7 @@ router.get("/metricas/aulas", async (req, res) => {
 });
 
 // GET /evaluaciones/resultados?docenteId=4&aulaId=123
+// GET /evaluaciones/resultados?docenteId=4&aulaId=123
 router.get("/resultados", async (req, res) => {
   try {
     const docenteId = Number(req.query.docenteId);
@@ -191,39 +192,109 @@ router.get("/resultados", async (req, res) => {
 
     const db = await openDb();
 
-    // 🔧 NOTA: Sin JOIN a evaluaciones_resultados para evitar 500 si la tabla no existe
-    const rows = await db.all(`
+    // 1) Trae evaluaciones del docente en el aula
+    const evals = await db.all(`
       SELECT
+        ev.id                 AS evaluacion_id,
         ev.estudiante_id,
         ev.nota,
-        ev.veredicto                         AS veredicto,
-        ex.nombre                            AS examen_nombre,
-        c.nombre                             AS curso_nombre
+        ev.veredicto,
+        ex.nombre             AS examen_nombre,
+        c.nombre              AS curso_nombre
       FROM evaluaciones ev
-      JOIN examenes ex              ON ev.examen_id = ex.id
-      JOIN cursos c                 ON ex.curso_id = c.id
-      JOIN estudiantes e            ON ev.estudiante_id = e.id
-      JOIN estudiantes_aulas ea     ON e.id = ea.estudiante_id
+      JOIN examenes  ex  ON ev.examen_id = ex.id
+      JOIN cursos    c   ON ex.curso_id  = c.id
+      JOIN estudiantes e ON ev.estudiante_id = e.id
+      JOIN estudiantes_aulas ea ON e.id = ea.estudiante_id
       WHERE ev.docente_id = ?
-        AND ea.aula_id = ?
-      ORDER BY e.id, ex.id
+        AND ea.aula_id     = ?
+      ORDER BY e.id, ex.id, ev.id
     `, [docenteId, aulaId]);
 
-    // Opcional: añade campos por defecto para evitar undefined en el front
-    const result = rows.map(r => ({
-      ...r,
-      total_correctas: null,
-      total_incorrectas: null,
-      preguntas_correctas: null,
-      preguntas_marcadas: null,
-    }));
+    if (evals.length === 0) return res.json([]);
 
-    return res.json(result);
+    // 2) Obtén el ÚLTIMO evaluacion_detalles por evaluación en un solo query
+    const ids = evals.map(r => r.evaluacion_id);
+    const placeholders = ids.map(() => '?').join(',');
+    const detallesRows = await db.all(
+      `
+      SELECT ed.evaluacion_id, ed.resumen_json
+      FROM evaluacion_detalles ed
+      JOIN (
+        SELECT evaluacion_id, MAX(id) AS max_id
+        FROM evaluacion_detalles
+        WHERE evaluacion_id IN (${placeholders})
+        GROUP BY evaluacion_id
+      ) t ON t.evaluacion_id = ed.evaluacion_id AND t.max_id = ed.id
+      `,
+      ids
+    );
+
+    const mapDetalle = new Map(detallesRows.map(r => [r.evaluacion_id, r.resumen_json]));
+
+    // 3) Arma salida con parciales
+    const out = evals.map(r => {
+      const raw = mapDetalle.get(r.evaluacion_id);
+      let total_correctas = 0, total_parciales = 0, total_incorrectas = 0;
+      const preguntas_correctas = [];
+      const preguntas_parciales = [];
+      const preguntas_marcadas = []; // [{numero, marcado}]
+
+      if (raw) {
+        try {
+          const det = JSON.parse(raw);
+          const valor = Number(det?.valorPregunta ?? 0);
+          const preguntas = Array.isArray(det?.preguntas) ? det.preguntas : [];
+
+          for (const p of preguntas) {
+            const num = Number(p?.numero);
+            const puntaje = Number(p?.puntaje ?? 0); // 0..1
+            // Estado tri: correcta (=1), parcial (>0 y <1), incorrecta (=0)
+            if (puntaje >= 1 - 1e-6) {
+              total_correctas += 1;
+              if (Number.isInteger(num)) preguntas_correctas.push(num);
+            } else if (puntaje > 0) {
+              total_parciales += 1;
+              if (Number.isInteger(num)) preguntas_parciales.push(num);
+            } else {
+              total_incorrectas += 1;
+            }
+
+            // “Marcadas”: lo que contestó el alumno (letra o texto)
+            if (Number.isInteger(num)) {
+              const marcado = (p?.alumno ?? "").toString().trim();
+              if (marcado.length) preguntas_marcadas.push({ numero: num, marcado });
+            }
+          }
+        } catch (_e) {
+          // si el JSON está malformado, deja los contadores en 0
+        }
+      }
+
+      return {
+        estudiante_id: r.estudiante_id,
+        examen_nombre: r.examen_nombre,
+        curso_nombre: r.curso_nombre,
+        nota: r.nota,
+        veredicto: r.veredicto ?? null,
+
+        // NUEVOS CAMPOS:
+        total_correctas,
+        total_parciales,
+        total_incorrectas,
+        preguntas_correctas,
+        preguntas_parciales,
+        preguntas_marcadas,
+      };
+    });
+
+    return res.json(out);
   } catch (err) {
-    console.error("ERROR /evaluaciones/resultados:", err.message);
+    console.error("ERROR /evaluaciones/resultados:", err);
     return res.status(500).json({ error: "DB_ERROR", message: err.message });
   }
 });
+
 
 export default router;
 

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { getDocenteIdPreferido } from "../../utils/session";
 
 
+
+
 // Modal de resultado
 function ResultadoModal({ open, onClose, data }) {
   if (!open) return null;
@@ -9,7 +11,7 @@ function ResultadoModal({ open, onClose, data }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden">
+      <div className="bg-white w-full max-w-4xl rounded-xl shadow-xl overflow-hidden">
         <div className="px-6 py-4 bg-[#004d8f] text-white">
           <h3 className="text-lg font-semibold">Resultado de la evaluación</h3>
         </div>
@@ -37,21 +39,47 @@ function ResultadoModal({ open, onClose, data }) {
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="p-2 text-left">#</th>
+                      <th className="p-2 text-left">Tipo</th>
                       <th className="p-2 text-left">Correcta</th>
                       <th className="p-2 text-left">Alumno</th>
+                      <th className="p-2 text-left">Puntos
+                        <span className="text-xs text-gray-500">(de {data?.valorPregunta ?? "?"} c/u)</span>
+                      </th>
                       <th className="p-2 text-left">Acierto</th>
+                      <th className="p-2 text-left">Feedback</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {preguntas.map((p) => (
-                      <tr key={p.n} className="border-t">
-                        <td className="p-2">{p.n}</td>
-                        <td className="p-2">{p.correcta}</td>
-                        <td className="p-2">{p.alumno ?? "—"}</td>
+                    {preguntas.map((p, i) => (
+                      <tr key={`${p.numero ?? i}-${p.tipo}`} className="border-t align-top">
+                        <td className="p-2 whitespace-nowrap">{p.numero ?? "—"}</td>
+                        <td className="p-2 whitespace-nowrap">
+                          {p.tipo === "abierta" ? "Abierta" : "Cerrada"}
+                        </td>
+                        <td className="p-2">
+                          {/* Texto largo con wrap */}
+                          <div className="max-w-[22rem] break-words">
+                            {p.correcta ?? "—"}
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <div className="max-w-[22rem] break-words">
+                            {p.alumno ?? "—"}
+                          </div>
+                        </td>
+                        <td className="p-2 whitespace-nowrap">
+                          {typeof p.puntos === "number" ? p.puntos.toFixed(2) : "—"}
+                        </td>
                         <td className="p-2">{p.acierto ? "✔️" : "❌"}</td>
+                        <td className="p-2">
+                          <div className="max-w-[20rem] break-words text-gray-600">
+                            {p.feedback || ""}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
+
                 </table>
               </div>
             </div>
@@ -91,6 +119,10 @@ export default function EvaluarExamenDocente() {
 
   // Ref para limpiar el input file del alumno
   const fileAlumnoRef = useRef(null);
+
+
+  const [cargando, setCargando] = useState(false);
+
 
 
   // 1) Cargar aulas donde enseña el DOCENTE
@@ -196,76 +228,80 @@ export default function EvaluarExamenDocente() {
   }
 
   function cerrarModalYLimpiar() {
-  setModalOpen(false);
-  setResultado(null);
-  // limpiar alumno
-  setEstudianteId("");
-  // limpiar archivo del alumno
-  setArchivoExamenAlumno(null);
-  if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
-}
-
- // 4) Subir EXAMEN RESUELTO DEL ALUMNO (PDF) -> crea registro en `evaluaciones`
-async function subirExamenAlumno() {
-  try {
-    setErr("");
-    setOk("");
-
-    if (!examenId) throw new Error("Primero crea el examen base (sube el PDF de preguntas).");
-    if (!estudianteId) throw new Error("Selecciona un alumno.");
-    if (!archivoExamenAlumno) throw new Error("Carga el PDF del examen resuelto por el alumno.");
-
-    // LOGS para depuración
-    console.log("===== SUBIENDO EXAMEN DEL ALUMNO =====");
-    console.log("docenteId:", docenteId);
-    console.log("aulaId:", aulaId);
-    console.log("cursoId:", cursoId);
-    console.log("estudianteId:", estudianteId);
-    console.log("examenId:", examenId);
-    console.log("archivoExamenAlumno:", archivoExamenAlumno);
-
-    const form = new FormData();
-    form.append("examen_id", String(examenId));
-    form.append("estudiante_id", String(estudianteId));
-    form.append("docente_id", String(docenteId)); // <-- agregado
-    form.append("archivo_resuelto", archivoExamenAlumno);
-
-    // Opcional: log del contenido de FormData (solo claves, el archivo no se imprime completo)
-    for (let [key, value] of form.entries()) {
-      console.log("FormData:", key, value);
-    }
-
-    const r = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones`, {
-      method: "POST",
-      body: form,
-    });
-
-    const data = await r.json();
-    if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
-
-    const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
-      method: "POST",
-    });
-
-    const resAuto = await rAuto.json();
-    if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
-
-    setResultado({
-      nota: resAuto.nota,
-      veredicto: resAuto.veredicto,
-      preguntas: resAuto?.detalle?.preguntas ?? [],
-    });
-    setModalOpen(true);
-
-    // limpieza del archivo
+    setModalOpen(false);
+    setResultado(null);
+    // limpiar alumno
+    setEstudianteId("");
+    // limpiar archivo del alumno
     setArchivoExamenAlumno(null);
     if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
-    setOk("");
-
-  } catch (e) {
-    setErr(e.message);
   }
-}
+
+  // 4) Subir EXAMEN RESUELTO DEL ALUMNO (PDF) -> crea registro en `evaluaciones`
+  async function subirExamenAlumno() {
+    try {
+      setErr("");
+      setOk("");
+      setCargando(true);
+
+      if (!examenId) throw new Error("Primero crea el examen base (sube el PDF de preguntas).");
+      if (!estudianteId) throw new Error("Selecciona un alumno.");
+      if (!archivoExamenAlumno) throw new Error("Carga el PDF del examen resuelto por el alumno.");
+
+      console.log("===== SUBIENDO EXAMEN DEL ALUMNO =====");
+      console.log("docenteId:", docenteId);
+      console.log("aulaId:", aulaId);
+      console.log("cursoId:", cursoId);
+      console.log("estudianteId:", estudianteId);
+      console.log("examenId:", examenId);
+      console.log("archivoExamenAlumno:", archivoExamenAlumno);
+
+      const form = new FormData();
+      form.append("examen_id", String(examenId));
+      form.append("estudiante_id", String(estudianteId));
+      form.append("docente_id", String(docenteId));
+      form.append("archivo_resuelto", archivoExamenAlumno);
+
+      for (let [key, value] of form.entries()) {
+        console.log("FormData:", key, value);
+      }
+
+      // 1) Crear evaluación
+      const r = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
+
+      // 2) Ejecutar auto-evaluación
+      const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
+        method: "POST",
+      });
+      const resAuto = await rAuto.json();
+      if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
+
+      // 3) Mostrar resultado
+      setResultado({
+        nota: resAuto.nota,
+        veredicto: resAuto.veredicto,
+        preguntas: resAuto?.detalle?.preguntas ?? [],
+        valorPregunta: resAuto?.detalle?.valorPregunta ?? undefined
+      });
+      setModalOpen(true);
+
+      // 4) Limpieza
+      setArchivoExamenAlumno(null);
+      if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
+      setOk("");
+
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setCargando(false); // siempre apagar el overlay
+    }
+  }
+
 
 
   return (
@@ -373,9 +409,37 @@ async function subirExamenAlumno() {
       </div>
 
       {ok && <div className="mt-3 text-green-700">{ok}</div>}
-      
+
 
       {err && <div className="mt-3 text-red-700">{err}</div>}
+
+
+      {cargando && (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h4 className="text-lg font-semibold mb-3 text-[#004d8f]">
+              Evaluando examen...
+            </h4>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="bg-[#004d8f] h-2 w-1/3 animate-[progress_1.2s_ease-in-out_infinite]" />
+            </div>
+            <p className="text-sm text-gray-600 mt-3">
+              Esto puede tomar unos momentos cuando hay preguntas abiertas.
+            </p>
+            <style>{`
+        @keyframes progress {
+          0%   { transform: translateX(-100%); }
+          50%  { transform: translateX(0%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-[progress_1.2s_ease-in-out_infinite] {
+          animation: progress 1.2s ease-in-out infinite;
+        }
+      `}</style>
+          </div>
+        </div>
+      )}
+
 
       <ResultadoModal
         open={modalOpen}
