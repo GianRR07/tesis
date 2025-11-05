@@ -15,7 +15,8 @@ Asegúrate de instalarlo en backend-tesis.`
   );
 }
 
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "hermes3:8b";
+// === MEJORA: Cambio de Modelo a Llama 3 para mejor razonamiento/aritmética ===
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3:8b";
 
 // === util: lee PDF a texto
 async function leerPDF(absPath) {
@@ -65,9 +66,16 @@ ${jsonSchemaHint || ""}`,
   }
 
   try {
-    return JSON.parse(data.response);
+    // === MEJORA: Añadir console.error para debug si el LLM falla ===
+    const responseText = data.response;
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      console.error("El modelo no devolvió JSON válido. Respuesta recibida:", responseText);
+      throw new Error("El modelo no devolvió JSON válido. Ajusta el prompt o prueba con otra plantilla.");
+    }
   } catch (_e) {
-    throw new Error("El modelo no devolvió JSON válido. Ajusta el prompt o prueba con otra plantilla.");
+    throw new Error("Error interno al procesar la respuesta del LLM.");
   }
 }
 
@@ -78,10 +86,21 @@ function letraABCD(s) {
   return m ? m[1].toUpperCase() : null;
 }
 
-// --- Helpers para respuestas abiertas
+// --- Helpers para respuestas abiertas (MEJORA: Limpieza Agresiva de Etiquetas)
 function limpiarLinea(s) {
-  return String(s || "")
-    .replace(/\s+/g, " ")
+  // 1. Reemplaza múltiples espacios por uno solo
+  let limpio = String(s || "").replace(/\s+/g, " ").trim();
+
+  // 2. Elimina etiquetas de formato comunes (caso-insensible y global)
+  limpio = limpio
+    .replace(/\bProcedimiento\s*:\s*/gi, "")
+    .replace(/\bResultado Final\s*:\s*/gi, "")
+    .replace(/\bRespuesta Clave\s*:\s*/gi, "")
+    .replace(/\bRespuesta Oficial\s*:\s*/gi, "")
+    .trim();
+
+  // 3. Limpieza de caracteres de inicio (tu lógica original)
+  return limpio
     .replace(/^[:\-–]\s*/, "")
     .trim();
 }
@@ -199,8 +218,8 @@ function mapearPorNumero(arr, campo = "numero") {
 // extrae la CLAVE del examen (del PDF del docente) soportando cerradas y abiertas
 async function extraerClaveDesdeTextoLLM(texto) {
   // 1) saca ambas por regex
-  const rxCerradas = extraerRespuestasCerradasPorRegex(texto);   // [{numero, respuesta}]
-  const rxAbiertas = extraerRespuestasTextoPorRegex(texto);      // [{numero, respuesta_texto}]
+  const rxCerradas = extraerRespuestasCerradasPorRegex(texto);  // [{numero, respuesta}]
+  const rxAbiertas = extraerRespuestasTextoPorRegex(texto);    // [{numero, respuesta_texto}]
 
   if (rxCerradas.length || rxAbiertas.length) {
     const m = new Map();
@@ -241,7 +260,8 @@ ${texto}
 # Ejemplo:
 {"preguntas":[{"numero":1,"tipo":"cerrada","respuesta_correcta":"B"}]}
 `;
-  const schemaHint = `{"preguntas":[{"numero":1,"tipo":"cerrada","respuesta_correcta":"B"}]}`;
+  // === MEJORA: Incluir ejemplo de abierta para guiar al LLM ===
+  const schemaHint = `{"preguntas":[{"numero":1,"tipo":"cerrada","respuesta_correcta":"B"},{"numero":2,"tipo":"abierta","respuesta_correcta_texto":"el proceso es..."}]}`;
   const out = await ollamaJSON({ prompt, jsonSchemaHint: schemaHint });
   const preguntas = Array.isArray(out.preguntas) ? out.preguntas : [];
   return preguntas
@@ -281,7 +301,8 @@ async function extraerResAlumnoDesdeTextoLLM(texto) {
   if (arrCerradas.length > 0 || rxAbiertas.length > 0) {
     // Unimos por numero (si hay doble, priorizamos cerrada explícita)
     const m = new Map();
-    for (const it of [...arrCerradas, ...rxAbiertas]) m.set(it.numero, it);
+    // === MEJORA: Cambiamos el orden para que la CERRADA pise a la abierta, según la lógica deseada ===
+    for (const it of [...rxAbiertas, ...arrCerradas]) m.set(it.numero, it);
     return [...m.values()].sort((a, b) => a.numero - b.numero);
   }
 
@@ -305,8 +326,8 @@ ${texto}
 
 # Ejemplo de salida:
 {"respuestas":[
-  {"numero":1,"tipo":"cerrada","respuesta_alumno":"A"},
-  {"numero":2,"tipo":"abierta","respuesta_alumno_texto":"Es el proceso ..."}
+  {"numero":1,"tipo":"cerrada","respuesta_alumno":"A"},
+  {"numero":2,"tipo":"abierta","respuesta_alumno_texto":"Es el proceso ..."}
 ]}
 `;
 
@@ -324,35 +345,73 @@ ${texto}
     .filter(r => Number.isInteger(r.numero) && r.numero > 0 && (r.respuesta_alumno || r.respuesta_alumno_texto));
 }
 
+
 // --------------------------------------------------------------------------------------
-// PUNTUACIÓN ABIERTA
+// PUNTUACIÓN ABIERTA (Mejorada: Detecta tipo y genera Feedback único)
 // --------------------------------------------------------------------------------------
 
 async function puntuarAbiertaLLM({ numero, enunciado, respuestaDocente, respuestaAlumno }) {
-  const prompt = `
-Eres un evaluador objetivo de respuestas abiertas para ciencias.
-Devuelve SOLO JSON con: "score" (0..1 en 0, 0.25, 0.5, 0.75, 1.0) y "feedback" (máx 240 caracteres).
-Responde SIEMPRE en español (variedad neutral, clara y breve).
-Evalúa con:
-1) Exactitud científica (0-0.4)
-2) Cobertura de ideas clave (0-0.4)
-3) Claridad y completitud (0-0.2)
+  // === Lógica de Detección de Tipo de Contenido para ajustar el Prompt ===
+  const esConceptual = /proceso|sistema|estructura|definici[oó]n|explica|qu[eé] es/i.test(enunciado) || /(biolog[íi]a|historia|literatura|filosof[íi]a)/i.test(enunciado);
+  const esMatematico = /calcule|encuentre|despeje|ecuaci[oó]n|resuelva|demuestre/i.test(enunciado);
 
-Si la respuesta del alumno es vacía o fuera de tema, score=0 y feedback breve en español.
+  let rubricaPrompt;
+  let rolExtra = "";
+
+  if (esMatematico) {
+    rubricaPrompt = `
+  Evalúa con la siguiente rúbrica para obtener el score (máximo 1.0):
+  1. **Identificación de la Fórmula/Principio Algebraico correcto:** (0 - 0.3 puntos)
+  2. **Procedimiento/Desarrollo lógico y pasos intermedios correctos:** (0 - 0.4 puntos)
+  3. **Cálculo/Resultado final estrictamente CORRECTO:** (0 - 0.3 puntos)
+
+  Si el alumno usa el principio correcto pero tiene un error de cálculo simple, debe ser evaluado como parcial (ej: 0.75).
+  `;
+  } else { // Preguntas Conceptuales
+    rubricaPrompt = `
+  Evalúa con la siguiente rúbrica estricta para obtener el score (máximo 1.0):
+  1. **EXACTITUD CIENTÍFICA (CORRECTEZ Y AUSENCIA DE CONTRADICCIÓN):** (0 - 0.7 puntos)
+  2. **COBERTURA DE IDEAS CLAVE (Relevancia y Enfoque Directo):** (0 - 0.2 puntos)
+  3. **CLARIDAD y ORDEN:** (0 - 0.1 puntos)
+
+  ***REGLA DE ERROR FATAL (PRIORIDAD):***
+  A. Si la respuesta del alumno **CONTRADICE** la clave oficial (ej: Q2, decir que procariotas tienen núcleo), el score DEBE ser **0.00**.
+  B. Si la respuesta del alumno es **TOTALMENTE IRRELEVANTE** (ej: Q4, hablar de músculos en lugar de circulación), el score DEBE ser **0.00**.
+  C. Si hay **INEXACTITUD GRAVE** pero parcial (ej: Q1, "comen el sol"), el score MÁXIMO es **0.25**.
+
+  Si la respuesta del alumno es vacía o incomprensible, el score DEBE ser 0.
+  `;
+  }
+
+  const prompt = `
+Eres un evaluador objetivo y estricto. Tu tarea es comparar la respuesta del alumno con la respuesta clave oficial y otorgar un puntaje que refleje su precisión. Debes seguir las siguientes reglas:
+1. **Errores graves**: Si la respuesta contiene información incorrecta que contradice completamente la clave oficial (por ejemplo, afirmar que las procariotas tienen núcleo), el puntaje debe ser **0.0**.
+2. **Respuestas irrelevantes o fuera de contexto**: Si la respuesta no aborda correctamente la pregunta o es completamente fuera de tema (por ejemplo, hablar sobre músculos cuando la pregunta es sobre circulación sanguínea), el puntaje debe ser **0.0**.
+3. **Respuestas parcialmente correctas**: Si la respuesta menciona algunos elementos correctos pero le falta información crucial, se debe otorgar un puntaje parcial, con un máximo de **0.75**.
+4. **Respuestas completas y precisas**: Si la respuesta es totalmente correcta, el puntaje debe ser **1.0**.
+5. **Feedback**: Genera un feedback claro y conciso sobre los errores, especificando qué información falta o está incorrecta.
+
+Si la respuesta es incompleta o incoherente, asigna el puntaje más bajo posible.
+
+### INSTRUCCIONES:
+- No debes generar explicaciones adicionales, solo el puntaje y el feedback.
+- El feedback debe ser específico para que el alumno pueda mejorar en la siguiente evaluación.
 
 # PREGUNTA #${numero}
 ${enunciado || "(sin enunciado en fuente)"}
 
-# RESPUESTA OFICIAL (docente)
+# RESPUESTA CLAVE (Docente)
 ${respuestaDocente}
 
-# RESPUESTA ALUMNO
+# RESPUESTA DEL ALUMNO
 ${respuestaAlumno}
 
 # Salida JSON:
-{"score":0.75,"feedback":"..."}
+{"score":0.75,"feedback":"Aquí va el feedback único, NO este texto de ejemplo."}
 `;
-  const schemaHint = `{"score":0.75,"feedback":"texto en español"}`;
+
+  const schemaHint = `{"score":0.75,"feedback":"texto descriptivo en español generado por el modelo"}`;
+
   try {
     const out = await ollamaJSON({ prompt, jsonSchemaHint: schemaHint });
     const s = Math.max(0, Math.min(1, Number(out.score)));
@@ -441,13 +500,20 @@ async function calificar(preguntasClave, respuestasAlumno) {
   const acumulado = detalle.reduce((s, d) => s + (d.puntaje || 0), 0);
   const correctas = detalle.reduce((s, d) => s + (d.puntaje === 1 ? 1 : 0), 0);
 
+  // === NUEVO: Calcular las parciales ===
+  const parciales = detalle.reduce((s, d) => s + (d.puntaje > 0 && d.puntaje < 1 ? 1 : 0), 0);
+  // ===
+  const incorrectas = total - correctas - parciales; // Por si acaso
+
   const nota = Math.round((acumulado * valor) * 100) / 100;
   return {
     nota,
     correctas,
     total,
     valorPregunta: Math.round(valor * 100) / 100,
-    detalle
+    detalle,
+    parciales: parciales,
+    incorrectas: incorrectas
   };
 }
 

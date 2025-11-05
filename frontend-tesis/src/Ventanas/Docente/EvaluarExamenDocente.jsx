@@ -70,8 +70,14 @@ function ResultadoModal({ open, onClose, data }) {
                         <td className="p-2 whitespace-nowrap">
                           {typeof p.puntos === "number" ? p.puntos.toFixed(2) : "—"}
                         </td>
-                        <td className="p-2">{p.acierto ? "✔️" : "❌"}</td>
                         <td className="p-2">
+                          {p.puntaje === 1 // ¿Puntaje máximo?
+                            ? "✔️" // Correcto
+                            : p.puntaje > 0 // ¿Puntaje mayor que cero (pero menor que 1)?
+                              ? "◐" // Parcial
+                              : "❌" // Incorrecto (cero)
+                          }
+                        </td>                        <td className="p-2">
                           <div className="max-w-[20rem] break-words text-gray-600">
                             {p.feedback || ""}
                           </div>
