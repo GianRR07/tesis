@@ -306,43 +306,8 @@ async function extraerResAlumnoDesdeTextoLLM(texto) {
     return [...m.values()].sort((a, b) => a.numero - b.numero);
   }
 
-  // 3) Fallback LLM
-  console.warn("[ExtractorAlumno] Cayendo a LLM fallback");
-  const prompt = `
-Eres un extractor estricto de RESPUESTAS del ALUMNO.
-Devuelve SOLO JSON con arreglo "respuestas".
-Cada ítem:
-- "numero": entero
-- "tipo": "cerrada" | "abierta"
-- si "cerrada": "respuesta_alumno": "A" | "B" | "C" | "D"
-- si "abierta": "respuesta_alumno_texto": string (texto literal o resumido fielmente)
-
-Reglas:
-- NO inventes respuestas.
-- Devuelve SOLO JSON válido.
-
-# TEXTO (ALUMNO)
-${texto}
-
-# Ejemplo de salida:
-{"respuestas":[
-  {"numero":1,"tipo":"cerrada","respuesta_alumno":"A"},
-  {"numero":2,"tipo":"abierta","respuesta_alumno_texto":"Es el proceso ..."}
-]}
-`;
-
-  const schemaHint = `{"respuestas":[{"numero":1,"tipo":"cerrada","respuesta_alumno":"A"}]}`;
-  const out = await ollamaJSON({ prompt, jsonSchemaHint: schemaHint });
-  const respuestas = Array.isArray(out.respuestas) ? out.respuestas : [];
-  return respuestas
-    .map(r => ({
-      numero: Number(r.numero),
-      tipo: r.tipo === "abierta" ? "abierta" : "cerrada",
-      respuesta_alumno: r.tipo === "cerrada" ? letraABCD(r.respuesta_alumno) : null,
-      respuesta_alumno_texto: r.tipo === "abierta" ? limpiarLinea(r.respuesta_alumno_texto) : null,
-      justificacion: ""
-    }))
-    .filter(r => Number.isInteger(r.numero) && r.numero > 0 && (r.respuesta_alumno || r.respuesta_alumno_texto));
+  // Asegurar que siempre sea un array vacío si no se encuentran respuestas
+  return [];
 }
 
 
@@ -351,49 +316,55 @@ ${texto}
 // --------------------------------------------------------------------------------------
 
 async function puntuarAbiertaLLM({ numero, enunciado, respuestaDocente, respuestaAlumno }) {
-  // === Lógica de Detección de Tipo de Contenido para ajustar el Prompt ===
-  const esConceptual = /proceso|sistema|estructura|definici[oó]n|explica|qu[eé] es/i.test(enunciado) || /(biolog[íi]a|historia|literatura|filosof[íi]a)/i.test(enunciado);
-  const esMatematico = /calcule|encuentre|despeje|ecuaci[oó]n|resuelva|demuestre/i.test(enunciado);
+  const esConceptual =
+    /proceso|sistema|estructura|definici[oó]n|explica|qu[eé] es/i.test(enunciado) ||
+    /(biolog[íi]a|historia|literatura|filosof[íi]a)/i.test(enunciado);
+
+  const esMatematico =
+    /calcule|encuentre|despeje|ecuaci[oó]n|resuelva|demuestre/i.test(enunciado);
 
   let rubricaPrompt;
-  let rolExtra = "";
 
   if (esMatematico) {
     rubricaPrompt = `
-  Evalúa con la siguiente rúbrica para obtener el score (máximo 1.0):
-  1. **Identificación de la Fórmula/Principio Algebraico correcto:** (0 - 0.3 puntos)
-  2. **Procedimiento/Desarrollo lógico y pasos intermedios correctos:** (0 - 0.4 puntos)
-  3. **Cálculo/Resultado final estrictamente CORRECTO:** (0 - 0.3 puntos)
+Evalúa con la siguiente rúbrica para obtener el score (máximo 1.0):
+1. Identificación de la Fórmula/Principio Algebraico correcto: (0 - 0.3 puntos)
+2. Procedimiento/Desarrollo lógico y pasos intermedios correctos: (0 - 0.4 puntos)
+3. Cálculo/Resultado final estrictamente CORRECTO: (0 - 0.3 puntos)
 
-  Si el alumno usa el principio correcto pero tiene un error de cálculo simple, debe ser evaluado como parcial (ej: 0.75).
-  `;
-  } else { // Preguntas Conceptuales
+Si el alumno usa el principio correcto pero tiene un error de cálculo simple, debe ser evaluado como parcial (ej: 0.75).
+`;
+  } else {
     rubricaPrompt = `
-  Evalúa con la siguiente rúbrica estricta para obtener el score (máximo 1.0):
-  1. **EXACTITUD CIENTÍFICA (CORRECTEZ Y AUSENCIA DE CONTRADICCIÓN):** (0 - 0.7 puntos)
-  2. **COBERTURA DE IDEAS CLAVE (Relevancia y Enfoque Directo):** (0 - 0.2 puntos)
-  3. **CLARIDAD y ORDEN:** (0 - 0.1 puntos)
+Evalúa con la siguiente rúbrica estricta para obtener el score (máximo 1.0):
+1. EXACTITUD CIENTÍFICA (CORRECTEZ Y AUSENCIA DE CONTRADICCIÓN): (0 - 0.7 puntos)
+2. COBERTURA DE IDEAS CLAVE (Relevancia y Enfoque Directo): (0 - 0.2 puntos)
+3. CLARIDAD y ORDEN: (0 - 0.1 puntos)
 
-  ***REGLA DE ERROR FATAL (PRIORIDAD):***
-  A. Si la respuesta del alumno **CONTRADICE** la clave oficial (ej: Q2, decir que procariotas tienen núcleo), el score DEBE ser **0.00**.
-  B. Si la respuesta del alumno es **TOTALMENTE IRRELEVANTE** (ej: Q4, hablar de músculos en lugar de circulación), el score DEBE ser **0.00**.
-  C. Si hay **INEXACTITUD GRAVE** pero parcial (ej: Q1, "comen el sol"), el score MÁXIMO es **0.25**.
+REGLA DE ERROR FATAL (PRIORIDAD):
+A. Si la respuesta del alumno CONTRADICE la clave oficial, el score debe ser 0.00.
+B. Si la respuesta es TOTALMENTE IRRELEVANTE, el score debe ser 0.00.
+C. Si hay INEXACTITUD GRAVE pero parcial, el score máximo es 0.25.
 
-  Si la respuesta del alumno es vacía o incomprensible, el score DEBE ser 0.
-  `;
+Si la respuesta del alumno es vacía o incomprensible, el score debe ser 0.
+`;
   }
 
   const prompt = `
-Eres un evaluador objetivo y estricto. Tu tarea es comparar la respuesta del alumno con la respuesta clave oficial y otorgar un puntaje que refleje su precisión. Debes seguir las siguientes reglas:
-1. **Errores graves**: Si la respuesta contiene información incorrecta que contradice completamente la clave oficial (por ejemplo, afirmar que las procariotas tienen núcleo), el puntaje debe ser **0.0**.
-2. **Respuestas irrelevantes o fuera de contexto**: Si la respuesta no aborda correctamente la pregunta o es completamente fuera de tema (por ejemplo, hablar sobre músculos cuando la pregunta es sobre circulación sanguínea), el puntaje debe ser **0.0**.
-3. **Respuestas parcialmente correctas**: Si la respuesta menciona algunos elementos correctos pero le falta información crucial, se debe otorgar un puntaje parcial, con un máximo de **0.75**.
-4. **Respuestas completas y precisas**: Si la respuesta es totalmente correcta, el puntaje debe ser **1.0**.
-5. **Feedback**: Genera un feedback claro y conciso sobre los errores, especificando qué información falta o está incorrecta.
+Eres un evaluador objetivo y estricto. Tu tarea es comparar la respuesta del alumno con la respuesta clave oficial y otorgar un puntaje que refleje su precisión.
+
+${rubricaPrompt}
+
+Reglas generales adicionales:
+1. Errores graves: Si la respuesta contiene información incorrecta que contradice completamente la clave oficial, el puntaje debe ser 0.0.
+2. Respuestas irrelevantes o fuera de contexto: Si la respuesta no aborda correctamente la pregunta o es completamente fuera de tema, el puntaje debe ser 0.0.
+3. Respuestas parcialmente correctas: Si la respuesta menciona algunos elementos correctos pero le falta información crucial, se debe otorgar un puntaje parcial, con un máximo de 0.75.
+4. Respuestas completas y precisas: Si la respuesta es totalmente correcta, el puntaje debe ser 1.0.
+5. Feedback: Genera un feedback claro y conciso sobre los errores, especificando qué información falta o está incorrecta.
 
 Si la respuesta es incompleta o incoherente, asigna el puntaje más bajo posible.
 
-### INSTRUCCIONES:
+INSTRUCCIONES:
 - No debes generar explicaciones adicionales, solo el puntaje y el feedback.
 - El feedback debe ser específico para que el alumno pueda mejorar en la siguiente evaluación.
 
@@ -418,7 +389,6 @@ ${respuestaAlumno}
     const fb = limpiarLinea(out.feedback || "");
     return { score: isFinite(s) ? s : 0, feedback: fb || "" };
   } catch (_e) {
-    // fallback conservador
     return { score: 0, feedback: "No se pudo evaluar automáticamente esta respuesta." };
   }
 }
@@ -517,12 +487,67 @@ async function calificar(preguntasClave, respuestasAlumno) {
   };
 }
 
-function veredicto(prom, cursoNombre) {
-  if (prom == null) return `No hay historial suficiente para el curso ${cursoNombre}.`;
-  if (prom >= 16) return `El alumno es muy bueno en el curso ${cursoNombre}.`;
-  if (prom >= 13) return `El alumno es bueno en el curso ${cursoNombre}.`;
-  if (prom >= 11) return `El alumno es regular en el curso ${cursoNombre}.`;
-  return `El alumno necesita refuerzo en el curso ${cursoNombre}.`;
+function veredicto(prom, cursoNombre, respuestasDetalle) {
+  // Verificar que respuestasDetalle es un array
+  if (!Array.isArray(respuestasDetalle)) {
+    console.error("Error: respuestasDetalle debe ser un array.");
+    throw new Error("respuestasDetalle debe ser un array.");
+  }
+  // Continuar con la lógica del veredicto
+  let mensaje = "";
+  let recomendacion = "";
+  let errorGrave = false;
+  let erroresPorTema = {};
+
+  // Detecta errores graves como contradicciones con la respuesta del profesor
+  respuestasDetalle.forEach((detalle) => {
+    if (detalle.acierto === false) {
+      if (detalle.tipo === "cerrada" && detalle.alumno !== detalle.correcta) {
+        errorGrave = true;
+        if (!erroresPorTema[detalle.numero]) {
+          erroresPorTema[detalle.numero] = { tipo: "cerrada", errores: [] };
+        }
+        erroresPorTema[detalle.numero].errores.push(`Error en la respuesta cerrada: Esperaba ${detalle.correcta}, pero se seleccionó ${detalle.alumno}.`);
+      }
+      if (detalle.tipo === "abierta" && detalle.alumno_texto && !detalle.correcta_texto.includes(detalle.alumno_texto)) {
+        errorGrave = true;
+        if (!erroresPorTema[detalle.numero]) {
+          erroresPorTema[detalle.numero] = { tipo: "abierta", errores: [] };
+        }
+        erroresPorTema[detalle.numero].errores.push(`Error en la respuesta abierta: El texto dado por el alumno no coincide con la respuesta correcta.`);
+      }
+    }
+  });
+
+  // Continuar con la clasificación según el promedio y recomendaciones
+  if (prom == null) {
+    mensaje = `No hay historial suficiente para el curso ${cursoNombre}.`;
+    recomendacion = "Por favor, asegúrese de tener suficientes evaluaciones registradas para poder proporcionar un análisis adecuado.";
+  } else if (prom >= 16) {
+    mensaje = `El alumno es muy bueno en el curso ${cursoNombre}.`;
+    recomendacion = "Continúe estimulando su interés con desafíos adicionales y proyectos avanzados para mantener su motivación alta.";
+  } else if (prom >= 13) {
+    mensaje = `El alumno es bueno en el curso ${cursoNombre}.`;
+    recomendacion = "Felicite al alumno por su desempeño. Para mejorar aún más, sugiera que profundice en áreas específicas o intente resolver problemas más complejos.";
+  } else if (prom >= 11) {
+    mensaje = `El alumno es regular en el curso ${cursoNombre}.`;
+    recomendacion = "El alumno necesita enfocarse más en la comprensión de los conceptos fundamentales. Considere repasar los temas clave y proporcionarle más ejercicios prácticos.";
+  } else {
+    mensaje = `El alumno necesita refuerzo en el curso ${cursoNombre}.`;
+    recomendacion = "Es recomendable que el alumno reciba apoyo adicional, tal vez con tutorías o material de repaso, para mejorar la comprensión de los conceptos básicos.";
+  }
+
+  // Si hubo errores graves, los detallamos y damos recomendaciones específicas
+  if (errorGrave) {
+    mensaje += " Se detectaron errores significativos en las respuestas. ";
+    let erroresDetalle = [];
+    for (const [numero, detalle] of Object.entries(erroresPorTema)) {
+      erroresDetalle.push(`Pregunta ${numero}: ${detalle.errores.join(", ")}`);
+    }
+    recomendacion += ` Recomendaciones: ${erroresDetalle.join(" ")}`;
+  }
+
+  return `${mensaje} ${recomendacion}`;
 }
 
 // --------------------------------------------------------------------------------------
@@ -553,6 +578,10 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
   // Extrae con parsers / LLM
   const preguntasClave = await extraerClaveDesdeTextoLLM(textoBase);
   const respuestasAlumno = await extraerResAlumnoDesdeTextoLLM(textoAlumno);
+  console.log("respuestasAlumno:", respuestasAlumno);  // Verifica que esto es un array
+  const respuestasDetalle = Array.isArray(respuestasAlumno) ? respuestasAlumno : []; // Aseguramos que siempre sea un array
+
+  // Ahora pasamos respuestasDetalle a la función veredicto
 
   // Califica
   const score = await calificar(preguntasClave, respuestasAlumno);
@@ -599,7 +628,8 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
   );
   const prom = rowProm?.prom != null ? Number(rowProm.prom) : null;
   const curso = await db.get(`SELECT nombre FROM cursos WHERE id = ?`, [ex.curso_id]);
-  const msg = veredicto(prom, curso?.nombre || "del curso");
+  const msg = veredicto(prom, curso?.nombre || "del curso", respuestasDetalle);
+
 
   return {
     nota: score.nota,
