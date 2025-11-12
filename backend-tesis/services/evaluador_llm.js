@@ -523,13 +523,13 @@ function veredicto(prom, cursoNombre, respuestasDetalle) {
   if (prom == null) {
     mensaje = `No hay historial suficiente para el curso ${cursoNombre}.`;
     recomendacion = "Por favor, asegúrese de tener suficientes evaluaciones registradas para poder proporcionar un análisis adecuado.";
-  } else if (prom >= 16) {
+  } else if (prom >= 17) {
     mensaje = `El alumno es muy bueno en el curso ${cursoNombre}.`;
     recomendacion = "Continúe estimulando su interés con desafíos adicionales y proyectos avanzados para mantener su motivación alta.";
-  } else if (prom >= 13) {
+  } else if (prom >= 14) {
     mensaje = `El alumno es bueno en el curso ${cursoNombre}.`;
     recomendacion = "Felicite al alumno por su desempeño. Para mejorar aún más, sugiera que profundice en áreas específicas o intente resolver problemas más complejos.";
-  } else if (prom >= 11) {
+  } else if (prom >= 12) {
     mensaje = `El alumno es regular en el curso ${cursoNombre}.`;
     recomendacion = "El alumno necesita enfocarse más en la comprensión de los conceptos fundamentales. Considere repasar los temas clave y proporcionarle más ejercicios prácticos.";
   } else {
@@ -628,7 +628,9 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
   );
   const prom = rowProm?.prom != null ? Number(rowProm.prom) : null;
   const curso = await db.get(`SELECT nombre FROM cursos WHERE id = ?`, [ex.curso_id]);
-  const msg = veredicto(prom, curso?.nombre || "del curso", respuestasDetalle);
+  // Veredicto basado en la calificación del examen actual
+  const msg = veredicto(score.nota, curso?.nombre || "del curso", respuestasDetalle);
+  //puedes crear una variable de mensaje 2 que si use el promedio total , algo asi "const msg = veredicto(prom, curso?.nombre || "del curso"); 
 
 
   return {
