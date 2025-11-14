@@ -9,8 +9,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // NUEVO: control del modal de selección de rol
   const [selectOpen, setSelectOpen] = useState(false);
+  const [rolesInfo, setRolesInfo] = useState(null); // Info temporal de roles
 
   const handleLogin = async () => {
     setErr("");
@@ -18,6 +18,7 @@ export default function Login() {
       setErr("Ingrese correo y contraseña");
       return;
     }
+
     try {
       setLoading(true);
       const res = await fetch(import.meta.env.VITE_API_URL + "/auth/login", {
@@ -25,29 +26,52 @@ export default function Login() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: pass }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.message || "Credenciales inválidas");
-      }
 
-      // Guarda sesión simple en localStorage (puedes cambiarlo por JWT luego)
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Credenciales inválidas");
+
+      // 🟢 Guardar toda la sesión
       localStorage.setItem("session", JSON.stringify(data));
 
-      // Redirección según roles
+      // --- Verificar roles ---
+      const esDocente = !!data?.roles?.docente;
+      const esTutor = !!data?.roles?.tutor;
+
+      // 🧑‍🏫 Guardar IDs de roles
+      if (esDocente) {
+        const docenteId =
+          data.roles.docente.id ?? data.roles.docente.docente_id ?? null;
+        if (docenteId) {
+          localStorage.setItem("docente_id", docenteId);
+          console.log("🧑‍🏫 Guardado docente_id:", docenteId);
+        }
+      }
+
+      if (esTutor) {
+        const tutorId =
+          data.roles.tutor.id ?? data.roles.tutor.tutor_id ?? null;
+        if (tutorId) {
+          localStorage.setItem("tutor_id", tutorId);
+          console.log("👨‍🏫 Guardado tutor_id:", tutorId);
+        }
+      }
+
+      // 🔹 Guardar aulas preferidas (si las hay)
+      const aulaTutor = data?.roles?.tutor?.aulas?.[0]?.id ?? null;
+      if (aulaTutor) {
+        localStorage.setItem("tutor_aula_id", aulaTutor);
+        console.log("🏫 Guardado aula del tutor:", aulaTutor);
+      }
+
+      // --- Redirecciones según tipo ---
       if (data.userType === "coordinador") {
         navigate("/coordinador");
         return;
       }
 
-      const esDocente = !!data?.roles?.docente; // presencia del rol
-      const esTutor = !!data?.roles?.tutor;   // presencia del rol
-
-      // (opcional) info de aulas si la quieres para mensajes
-      const aulasDocente = data?.roles?.docente?.aulas ?? [];
-      const aulasTutor = data?.roles?.tutor?.aulas ?? [];
-
+      // Si tiene ambos roles, mostrar modal
       if (esDocente && esTutor) {
-        // Tiene ambos roles → siempre ofrecer elección
+        setRolesInfo(data.roles);
         setSelectOpen(true);
         return;
       }
@@ -62,11 +86,11 @@ export default function Login() {
         return;
       }
 
-      // Sin roles conocidos
-      alert("Ingreso correcto, pero tu usuario no tiene rol asignado aún.");
+      alert("Ingreso correcto, pero el usuario no tiene rol asignado aún.");
       navigate("/");
 
     } catch (e) {
+      console.error("❌ Error al iniciar sesión:", e);
       setErr(e.message);
     } finally {
       setLoading(false);
@@ -75,7 +99,6 @@ export default function Login() {
 
   return (
     <div className="bg-[#004d8f] min-h-screen w-full flex justify-center items-center">
-      {/* Modal */}
       <div className="bg-white rounded-xl shadow-xl flex flex-col md:flex-row w-[700px] max-w-[90%] overflow-hidden">
         {/* Columna izquierda */}
         <div className="flex flex-col justify-center items-center p-10 md:w-1/2 bg-white">
@@ -93,7 +116,6 @@ export default function Login() {
 
           {err && <div className="mb-3 text-red-600 text-sm">{err}</div>}
 
-          {/* Inputs */}
           <input
             type="email"
             placeholder="Ingrese su correo"
@@ -109,7 +131,6 @@ export default function Login() {
             className="px-4 py-2 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004d8f]"
           />
 
-          {/* Botón único */}
           <button
             className="bg-[#004d8f] text-white py-2 rounded-lg mb-3 hover:bg-blue-900 transition disabled:opacity-60"
             onClick={handleLogin}
@@ -122,7 +143,7 @@ export default function Login() {
             Contáctanos
           </button>
 
-          {/* Modal para elegir rol cuando tiene Docente y Tutor */}
+          {/* Modal para elegir rol */}
           <RoleSelectModal
             open={selectOpen}
             onClose={() => setSelectOpen(false)}

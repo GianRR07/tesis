@@ -18,7 +18,15 @@ export function getDocenteIdPreferido() {
   // el login devuelve { userType, docente: { id, ... }, roles: {...} }
   return ses?.docente?.id ?? ses?.user?.id ?? null;
 }
-
+export function getTutorIdPreferido() {
+  try {
+    const raw = localStorage.getItem("tutor_id");
+    if (raw) return Number(raw);
+    return null;
+  } catch {
+    return null;
+  }
+}
 export function getUserId() {
   const ses = getSession();
   return ses?.docente?.id ?? ses?.tutor?.id ?? ses?.user?.id ?? null;

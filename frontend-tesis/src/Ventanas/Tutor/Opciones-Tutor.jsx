@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 
 import GestionarAulaTutor from "./GestionarAulaTutor";
 import ListaEstudiantes from "./ListaEstudiantes";
-import GestionExamen from "./GestionExamen";
 import EvaluarExamen from "./EvaluarExamen";
 
 export default function OpcionesTutor() {
@@ -46,15 +45,7 @@ export default function OpcionesTutor() {
             >
               Lista de estudiantes
             </button>
-            <button
-              className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "examen"
-                ? "bg-gray-300 text-[#004d8f]"
-                : "bg-white text-[#004d8f] hover:bg-gray-200"
-                }`}
-              onClick={() => setActive("examen")}
-            >
-              Gestión de Examen
-            </button>
+            
             <button
               className={`w-full rounded-full px-4 py-2 font-semibold transition ${active === "evaluar"
                 ? "bg-gray-300 text-[#004d8f]"
