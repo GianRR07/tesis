@@ -626,11 +626,18 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
     `,
     [ev.estudiante_id, ex.curso_id]
   );
-  const prom = rowProm?.prom != null ? Number(rowProm.prom) : null;
-  const curso = await db.get(`SELECT nombre FROM cursos WHERE id = ?`, [ex.curso_id]);
-  // Veredicto basado en la calificación del examen actual
-  const msg = veredicto(score.nota, curso?.nombre || "del curso", respuestasDetalle);
-  //puedes crear una variable de mensaje 2 que si use el promedio total , algo asi "const msg = veredicto(prom, curso?.nombre || "del curso"); 
+  
+  // Obtener el promedio del alumno
+const prom = rowProm?.prom != null ? Number(rowProm.prom) : null;
+
+// Obtener el nombre del curso asociado al examen
+const curso = await db.get(`SELECT nombre FROM cursos WHERE id = ?`, [ex.curso_id]);
+
+// 🔹 Asegurar que el nombre sea limpio y tenga respaldo
+const cursoNombre = curso?.nombre?.trim() || ex.nombre?.split(" ")[0] || "curso actual";
+
+// Veredicto basado en la calificación del examen actual
+const msg = veredicto(score.nota, cursoNombre, respuestasDetalle);
 
 
   return {

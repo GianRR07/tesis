@@ -1,3 +1,4 @@
+// migrate_add_tutor_id.js
 import { openDb } from "../db.js";
 
 export async function up() {
@@ -23,4 +24,15 @@ export async function up() {
   } else {
     console.log("⚪ Columna 'docente_id' ya existía, no se aplicó migración.");
   }
+
+  // --- Columna tutor_id ---
+  const existeTutor = info.some(col => col.name === "tutor_id");
+  if (!existeTutor) {
+    await db.run(`ALTER TABLE evaluaciones ADD COLUMN tutor_id INTEGER;`);
+    console.log("🟢 Migración: columna 'tutor_id' añadida en evaluaciones.");
+  } else {
+    console.log("⚪ Columna 'tutor_id' ya existía, no se aplicó migración.");
+  }
+
+  console.log("✅ Migración de evaluaciones completada correctamente.");
 }

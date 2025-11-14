@@ -5,23 +5,17 @@ import { openDb } from "../db.js";
 
 const router = express.Router();
 
-/**
- * POST /auth/login
- * body: { email, password }
- * - Si email=coordinador@edu.pe y password=soyadmin => coordinador
- * - Si coincide con docente (correo_ingreso + password_hash) =>
- *   devuelve roles: aulas donde enseña (docente) y aulas donde es tutor (emparejando por email en tutores/aula_tutores).
- */
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ error: "VALIDATION_ERROR", message: "email y password son requeridos" });
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "email y password son requeridos",
+      });
     }
 
-    // 1) Coordinador “fijo”
+    // 1) Coordinador fijo
     if (email === "coordinador@edu.pe" && password === "soyadmin") {
       return res.json({
         userType: "coordinador",
@@ -40,15 +34,21 @@ router.post("/login", async (req, res) => {
       [email]
     );
     if (!docente) {
-      return res.status(401).json({ error: "AUTH_ERROR", message: "Credenciales inválidas" });
+      return res.status(401).json({
+        error: "AUTH_ERROR",
+        message: "Credenciales inválidas",
+      });
     }
 
     const ok = await bcrypt.compare(password, docente.password_hash);
     if (!ok) {
-      return res.status(401).json({ error: "AUTH_ERROR", message: "Credenciales inválidas" });
+      return res.status(401).json({
+        error: "AUTH_ERROR",
+        message: "Credenciales inválidas",
+      });
     }
 
-    // 3) AULAS donde es DOCENTE (enseña algún curso del aula)
+    // 3) Aulas donde es DOCENTE
     const aulasDocente = await db.all(
       `
       SELECT a.id, a.nombre, a.grado, a.seccion
@@ -61,27 +61,36 @@ router.post("/login", async (req, res) => {
       [docente.id]
     );
 
-    // 4) AULAS donde es TUTOR (docente en rol de tutor)
-    //    Empareja por email (case-insensitive) en tutores/aula_tutores.
+    // 4) Buscar si también es TUTOR
     const emailNorm = (docente.email || "").trim();
-    const aulasTutor = await db.all(
-      `
-      SELECT a.id, a.nombre, a.grado, a.seccion
-      FROM aula_tutores at
-      JOIN tutores t ON t.id = at.tutor_id
-      JOIN aulas   a ON a.id = at.aula_id
-      WHERE LOWER(t.email) = LOWER(?)
-      ORDER BY a.grado, a.seccion
-      `,
+    const tutor = await db.get(
+      `SELECT id, nombre, email FROM tutores WHERE LOWER(email) = LOWER(?)`,
       [emailNorm]
     );
 
-    // Siempre devolvemos las claves 'docente' y 'tutor' con arrays (aunque estén vacíos)
-    const roles = {
-      docente: { aulas: aulasDocente },
-      tutor:   { aulas: aulasTutor   },
-    };
+    let aulasTutor = [];
+    if (tutor) {
+      aulasTutor = await db.all(
+        `
+        SELECT a.id, a.nombre, a.grado, a.seccion
+        FROM aula_tutores at
+        JOIN aulas a ON a.id = at.aula_id
+        WHERE at.tutor_id = ?
+        ORDER BY a.grado, a.seccion
+        `,
+        [tutor.id]
+      );
+    }
 
+    // 🔹 Construimos roles dinámicos
+    const roles = {
+      docente: { id: docente.id, aulas: aulasDocente },
+    };
+    if (tutor) {
+      roles.tutor = { id: tutor.id, aulas: aulasTutor };
+    }
+
+    // 5) Enviar respuesta
     return res.json({
       userType: "docente",
       docente: {
@@ -95,7 +104,9 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
+    return res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
 
