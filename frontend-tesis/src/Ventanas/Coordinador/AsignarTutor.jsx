@@ -4,11 +4,11 @@ export default function AsignarTutor() {
   const [aulas, setAulas] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [aulaSeleccionada, setAulaSeleccionada] = useState(null);
-  const [seleccionDocentes, setSeleccionDocentes] = useState([]); // IDs a asignar (máx 2)
+  const [seleccionDocentes, setSeleccionDocentes] = useState([]); 
 
   const toggleAula = (id) => {
     setAulaSeleccionada((prev) => {
-      if (prev?.id === id) return null; // si ya estaba seleccionada, se deselecciona
+      if (prev?.id === id) return null; 
       const a = aulas.find((x) => x.id === id);
       return a || null;
     });
@@ -30,7 +30,7 @@ export default function AsignarTutor() {
       if (!rDocentes.ok) throw new Error("No se pudo obtener docentes");
       const dataAulas = await rAulas.json();
       const dataDocentes = await rDocentes.json();
-      setAulas(dataAulas); // cada aula trae aula.tutores [{id,nombre}]
+      setAulas(dataAulas); 
       setDocentes(dataDocentes.map(d => ({ id: d.id, nombre: d.nombre })));
     } catch (e) {
       setErr(e.message);
@@ -70,7 +70,7 @@ export default function AsignarTutor() {
       );
       const t = await res.text();
       if (!res.ok) throw new Error(t || "No se pudo asignar");
-      await cargarTodo(); // refresca listas y tutores del aula
+      await cargarTodo(); 
       setSeleccionDocentes([]);
       alert("Tutor(es) asignado(s) correctamente.");
     } catch (e) {
@@ -91,7 +91,7 @@ export default function AsignarTutor() {
         throw new Error(t || "No se pudo quitar el tutor");
       }
       await cargarTodo();
-      // mantiene la selección del aula
+      
     } catch (e) {
       alert("Error: " + e.message);
     }
@@ -106,7 +106,6 @@ export default function AsignarTutor() {
 
       {!loading && !err && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Lista de aulas */}
           <div className="border rounded-lg p-4 shadow-sm">
             <h3 className="text-lg font-semibold mb-2">Aulas</h3>
             <table className="w-full border-collapse border border-gray-300 text-sm">
@@ -158,7 +157,7 @@ export default function AsignarTutor() {
                           onChange={() => setAulaSeleccionada(aulas.find(x => x.id === aula.id) || null)}
                           onClick={(e) => {
                             if (checked) {
-                              // Evita que el radio permanezca seleccionado
+                              
                               e.preventDefault();
                               setAulaSeleccionada(null);
                             }
@@ -172,7 +171,6 @@ export default function AsignarTutor() {
             </table>
           </div>
 
-          {/* Lista de docentes (para seleccionar hasta 2) */}
           <div className="border rounded-lg p-4 shadow-sm">
             <h3 className="text-lg font-semibold mb-2">Docentes</h3>
             <table className="w-full border-collapse border border-gray-300 text-sm">
@@ -208,7 +206,6 @@ export default function AsignarTutor() {
         </div>
       )}
 
-      {/* Botón Asignar */}
       <div className="mt-6 flex justify-end">
         <button
           onClick={handleAsignar}

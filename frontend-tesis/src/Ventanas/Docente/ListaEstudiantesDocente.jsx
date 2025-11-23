@@ -13,9 +13,9 @@ export default function ListaEstudiantesDocente() {
   const [err, setErr] = useState("");
 
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [datosModal, setDatosModal] = useState([]); // ahora usamos un solo estado
+  const [datosModal, setDatosModal] = useState([]); 
 
-  // Cargar aulas
+  
   useEffect(() => {
     async function cargarAulas() {
       setErr("");
@@ -35,8 +35,8 @@ export default function ListaEstudiantesDocente() {
     cargarAulas();
   }, [docenteId]);
 
-  // Cargar estudiantes y resultados al seleccionar aula
-  // Cargar estudiantes y resultados al seleccionar aula
+  
+  
 useEffect(() => {
   async function cargarEstudiantesYNotas() {
     setEstudiantes([]);
@@ -44,7 +44,7 @@ useEffect(() => {
     if (!aulaSeleccionada) return;
 
     try {
-      // 1) Estudiantes del aula
+      
       const resEst = await fetch(
         `${import.meta.env.VITE_API_URL}/docentes/${docenteId}/estudiantes?aulaId=${aulaSeleccionada}`
       );
@@ -53,14 +53,14 @@ useEffect(() => {
       const estudiantesNormalizados = dataEst.map(e => ({ ...e, id: Number(e.id) }));
       setEstudiantes(estudiantesNormalizados);
 
-      // 2) ÚNICO fetch: trae todo con parciales
+      
       const resFull = await fetch(
         `${import.meta.env.VITE_API_URL}/evaluaciones/resultados?docenteId=${docenteId}&aulaId=${aulaSeleccionada}`
       );
       const dataFull = await resFull.json();
       if (!resFull.ok) throw new Error(dataFull?.message || "No se pudieron cargar resultados.");
 
-      // 3) Construir estructura por estudiante
+      
       const resultadosPorEst = {};
       dataFull.forEach(r => {
         if (!resultadosPorEst[r.estudiante_id]) resultadosPorEst[r.estudiante_id] = [];
@@ -97,7 +97,7 @@ useEffect(() => {
     }));
   };
 
-  // Abrir modal con datos combinados
+  
   const abrirModal = (datos) => {
     setDatosModal(datos);
     setModalAbierto(true);
@@ -107,7 +107,6 @@ useEffect(() => {
     <div className="p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-[#004d8f]">Lista de estudiantes</h2>
 
-      {/* Selector de aula */}
       <div className="mb-6">
         <label className="block font-medium text-gray-700 mb-1">Nombre del Aula:</label>
         <select
@@ -123,7 +122,6 @@ useEffect(() => {
         </select>
       </div>
 
-      {/* Lista de estudiantes */}
       {aulaSeleccionada && (
         <div className="space-y-6">
           {estudiantes.map(est => {
@@ -142,7 +140,6 @@ useEffect(() => {
 
                 {notas.length > 0 && (
                   <>
-                    {/* Notas en texto */}
                     <div className="space-y-2 mb-4">
                       {notas.map((n, i) => (
                         <div key={i} className="border-t pt-2 text-sm text-gray-700">
@@ -201,7 +198,6 @@ useEffect(() => {
                       ))}
                     </div>
 
-                    {/* Botón para abrir modal con RadarChart */}
                     <button
                       onClick={() =>
                         abrirModal(
@@ -227,7 +223,6 @@ useEffect(() => {
 
       {err && <div className="mt-4 text-red-600">{err}</div>}
 
-      {/* Modal */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div

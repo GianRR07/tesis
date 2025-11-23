@@ -28,13 +28,13 @@ export default function ListaAulas() {
   const handleEditar = (id) => {
     const aula = aulas.find(a => a.id === id);
     if (!aula) return;
-    // abre modal con copia editable
+    
     setEditAula({ id: aula.id, nombre: aula.nombre, grado: aula.grado, seccion: aula.seccion });
   };
 
   const handleEliminar = (id) => {
     if (window.confirm("¿Seguro que quieres eliminar este aula?")) {
-      // pendiente: DELETE /aulas/:id en backend
+      
       setAulas((prev) => prev.filter((a) => a.id !== id));
     }
   };
@@ -128,7 +128,6 @@ export default function ListaAulas() {
         </table>
       )}
 
-      {/* Modal editar aula */}
       {editAula && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
@@ -191,8 +190,8 @@ export default function ListaAulas() {
                       const t = await res.text();
                       throw new Error(t || "No se pudo actualizar el aula");
                     }
-                    const updated = await res.json(); // {id,nombre,grado,seccion}
-                    // Actualiza estado local sin re-fetch completo
+                    const updated = await res.json(); 
+                    
                     setAulas(prev =>
                       prev.map(a => (a.id === updated.id ? { ...a, ...updated } : a))
                     );

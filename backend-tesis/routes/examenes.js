@@ -6,11 +6,11 @@ import { openDb } from "../db.js";
 
 const router = express.Router();
 
-// carpeta de subida
+
 const uploadDir = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
-// configuración multer
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => {
@@ -28,7 +28,7 @@ const upload = multer({
   },
 });
 
-// POST /examenes  (multipart)  fields: nombre, curso_id, archivo (pdf)
+
 router.post("/", upload.single("archivo"), async (req, res) => {
   try {
     const { nombre, curso_id } = req.body || {};
@@ -41,7 +41,7 @@ router.post("/", upload.single("archivo"), async (req, res) => {
     }
 
     const db = await openDb();
-    // validar curso
+    
     const curso = await db.get("SELECT id FROM cursos WHERE id = ?", [Number(curso_id)]);
     if (!curso) {
       fs.unlinkSync(req.file.path);

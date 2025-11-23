@@ -16,9 +16,9 @@ export default function ListaEstudiantesDocente() {
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [datosModal, setDatosModal] = useState([]);
-  const [tipoModal, setTipoModal] = useState("curso"); // 'curso' o 'general'
+  const [tipoModal, setTipoModal] = useState("curso"); 
 
-  // Cargar aulas del docente
+  
   useEffect(() => {
     async function cargarAulas() {
       if (!docenteId) {
@@ -38,7 +38,7 @@ export default function ListaEstudiantesDocente() {
     cargarAulas();
   }, [docenteId]);
 
-  // Cargar estudiantes + resultados filtrados por tutor
+  
   useEffect(() => {
     async function cargarDatos() {
       setEstudiantes([]);
@@ -46,7 +46,7 @@ export default function ListaEstudiantesDocente() {
       if (!aulaSeleccionada || !tutorId) return;
 
       try {
-        // estudiantes
+        
         const resEst = await fetch(
           `${import.meta.env.VITE_API_URL}/docentes/${docenteId}/estudiantes?aulaId=${aulaSeleccionada}`
         );
@@ -54,14 +54,14 @@ export default function ListaEstudiantesDocente() {
         if (!resEst.ok) throw new Error(dataEst?.message || "No se pudo cargar estudiantes.");
         setEstudiantes(dataEst);
 
-        // resultados del tutor
+        
         const resRes = await fetch(
           `${import.meta.env.VITE_API_URL}/evaluaciones/resultados/tutor/por-curso?tutorId=${tutorId}&aulaId=${aulaSeleccionada}`
         );
         const dataRes = await resRes.json();
         if (!resRes.ok) throw new Error(dataRes?.message || "No se pudieron cargar resultados.");
 
-        // Normalizamos resultados
+        
         const agrupados = {};
         for (const curso in dataRes) {
           for (const estudianteId in dataRes[curso]) {
@@ -94,7 +94,6 @@ export default function ListaEstudiantesDocente() {
     <div className="bg-white shadow-md rounded-lg p-6">
       <h2 className="text-2xl font-bold text-[#004d8f] mb-4">Lista de estudiantes</h2>
 
-      {/* Selección de aula */}
       <div className="mb-4">
         <label className="block font-medium text-gray-700 mb-1">Seleccione un aula:</label>
         <select
@@ -125,7 +124,7 @@ export default function ListaEstudiantesDocente() {
           {estudiantes.map((est) => {
             const resultadosEstudiante = resultados[est.id] || [];
 
-            // Agrupar por curso
+            
             const resultadosPorCurso = resultadosEstudiante.reduce((acc, curr) => {
               if (!acc[curr.curso]) acc[curr.curso] = [];
               acc[curr.curso].push(curr);
@@ -140,11 +139,10 @@ export default function ListaEstudiantesDocente() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold text-lg">{est.nombre}</span>
 
-                    {/* Botón Métricas generales */}
                     {resultadosEstudiante.length > 0 && (
                       <button
                         onClick={() => {
-                          // Calculamos promedio por curso
+                          
                           const promedios = cursos.map((curso) => {
                             const notas = resultadosPorCurso[curso].map((r) => r.nota);
                             const promedio =
@@ -206,7 +204,6 @@ export default function ListaEstudiantesDocente() {
         </tbody>
       </table>
 
-      {/* Modal del gráfico */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl relative">

@@ -17,14 +17,11 @@ export default function OpcionesTutor() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header */}
       <header className="bg-[#004d8f] text-white p-4 text-center font-bold text-xl">
         Opciones de Tutor
       </header>
 
-      {/* Layout */}
       <div className="flex flex-1">
-        {/* Sidebar */}
         <aside className="w-56 bg-[#004d8f] p-4 flex flex-col justify-between">
           <div className="space-y-2">
             <button
@@ -57,7 +54,6 @@ export default function OpcionesTutor() {
             </button>
           </div>
 
-          {/* Botón de logout */}
           <button
             onClick={handleLogout}
             className="w-full rounded-full px-4 py-2 font-semibold bg-white text-red-600 hover:bg-red-100 transition"
@@ -67,7 +63,6 @@ export default function OpcionesTutor() {
 
         </aside>
 
-        {/* Contenido principal */}
         <main className="flex-1 bg-[#f5f9ff] p-6 overflow-auto">
           {active === "inicio" && (
             <div className="bg-white shadow-md rounded-lg p-6 text-center max-w-3xl mx-auto">

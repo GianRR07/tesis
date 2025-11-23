@@ -19,14 +19,7 @@ ChartJS.register(
   Legend
 );
 
-/**
- * Props esperadas:
- * datos = [
- *   { curso: "Matemática", promedio: 15 },
- *   { curso: "Comunicación", promedio: 18 },
- *   ...
- * ]
- */
+
 export default function RadarChart2({ datos = [] }) {
   const labels = datos.map((d) => d.curso);
   const valores = datos.map((d) => d.promedio ?? 0);

@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 
 export default function RoleSelectModal({ open, onClose, onSelect }) {
-  // Cerrar con ESC
+  
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") onClose?.();
@@ -14,13 +14,11 @@ export default function RoleSelectModal({ open, onClose, onSelect }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Fondo */}
       <div
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
         aria-hidden="true"
       />
-      {/* Contenido */}
       <div
         role="dialog"
         aria-modal="true"

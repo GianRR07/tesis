@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getTutorAulaIdPreferida, getTutorIdPreferido } from "../../utils/session";
 
-// Modal mejorado
+
 function ResultadoModal({ open, onClose, data }) {
   if (!open || !data) return null;
   const { nota, veredicto, preguntas = [], valorPregunta, examenNombre } = data;
@@ -97,7 +97,7 @@ function ResultadoModal({ open, onClose, data }) {
   );
 }
 
-// Componente principal (envía como docente_id)
+
 export default function EvaluarExamen() {
   const [alumno, setAlumno] = useState("");
   const [archivoAlumno, setArchivoAlumno] = useState(null);
@@ -136,7 +136,7 @@ const docenteId = tutorId;
     cargar();
   }, [aulaId]);
 
-  // preview del archivo base
+  
   const handleBaseFileChange = (e) => {
     const file = e.target.files?.[0] || null;
     setArchivoBase(file);
@@ -151,7 +151,7 @@ const docenteId = tutorId;
     setArchivoAlumno(e.target.files?.[0] || null);
   };
 
-  // Subir examen base (con nombre)
+  
   async function subirExamenBase() {
     try {
       setErr("");
@@ -161,8 +161,8 @@ const docenteId = tutorId;
 
       const form = new FormData();
       form.append("nombre", examenNombre.trim());
-      // Si el tutor usa esto sin curso, debes pasar un curso válido. Aquí intento pasar 1 por defecto.
-      // Ideal: elegir curso. Si no quieres, pide al backend aceptar curso_id opcional.
+      
+      
       form.append("curso_id", String(1));
       form.append("archivo", archivoBase);
 
@@ -179,7 +179,7 @@ const docenteId = tutorId;
     }
   }
 
-  // Subir evaluación (envía docente_id para evitar cambios de DB)
+  
   async function subirEvaluacion() {
     try {
       setErr("");
@@ -196,7 +196,7 @@ const docenteId = tutorId;
 form.append("estudiante_id", String(alumno));
 form.append("docente_id", String(docenteId));
 
-// 🟢 Si el tutor está logueado, envíalo también
+
 if (tutorId) {
   form.append("tutor_id", String(tutorId));
 }
@@ -211,7 +211,7 @@ form.append("archivo_resuelto", archivoAlumno);
       const data = await r.json();
       if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
 
-      // ejecutar auto
+      
       const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
         method: "POST",
       });
@@ -230,7 +230,7 @@ setResultado({
 
       setModalOpen(true);
       setOk("Evaluación completada.");
-      // limpieza
+      
       setArchivoAlumno(null);
       if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
     } catch (e) {
@@ -244,7 +244,6 @@ setResultado({
     <div className="p-6 bg-white rounded-lg shadow-md max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-[#004d8f]">Evaluar Examen</h2>
 
-      {/* Nombre del examen */}
       <div className="mb-4">
         <label className="block font-medium text-gray-700">Nombre del examen:</label>
         <input
@@ -256,7 +255,6 @@ setResultado({
         />
       </div>
 
-      {/* Subir examen base */}
       <div className="mb-6">
         <label className="block font-medium text-gray-700">Suba el examen base (PDF o imagen):</label>
         <input
@@ -277,7 +275,6 @@ setResultado({
           {examenId && <div className="self-center text-sm text-green-700">ID examen: {examenId}</div>}
         </div>
 
-        {/* preview */}
         {previewBase && (
           <div className="mt-4 border rounded-lg p-3 bg-gray-50">
             {archivoBase?.type === "application/pdf" ? (
@@ -289,7 +286,6 @@ setResultado({
         )}
       </div>
 
-      {/* Selección alumno y subir resuelto */}
       <div className="mb-4">
         <label className="block font-medium text-gray-700">Seleccione un alumno:</label>
         <select

@@ -3,14 +3,14 @@ import { openDb } from "../db.js";
 
 const router = express.Router();
 
-// Listar cursos
+
 router.get("/", async (req, res) => {
   const db = await openDb();
   const cursos = await db.all("SELECT * FROM cursos");
   res.json(cursos);
 });
 
-// Crear curso (con docente asignado)
+
 router.post("/", async (req, res) => {
   try {
     const { nombre, docenteId } = req.body;
@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
     if (!nombre) {
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "El nombre es obligatorio" });
     }
-    // docenteId puede ser opcional, pero si viene, validamos que exista
+    
     const db = await openDb();
 
     if (docenteId) {

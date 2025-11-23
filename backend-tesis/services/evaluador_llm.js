@@ -1,4 +1,4 @@
-// backend-tesis/services/evaluador_llm.js
+
 import fs from "fs";
 import path from "path";
 import { openDb } from "../db.js";
@@ -6,7 +6,7 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 
-// Carga pdf-parse como CJS siempre
+
 const pdfParse = require("pdf-parse");
 if (typeof pdfParse !== "function") {
   throw new Error(
@@ -15,17 +15,17 @@ Asegúrate de instalarlo en backend-tesis.`
   );
 }
 
-// === MEJORA: Cambio de Modelo a Llama 3 para mejor razonamiento/aritmética ===
+
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3:8b";
 
-// === util: lee PDF a texto
+
 async function leerPDF(absPath) {
   const buf = fs.readFileSync(absPath);
   const data = await pdfParse(buf);
   return (data.text || "").replace(/\t/g, " ").trim();
 }
 
-// === llamada simple a Ollama (JSON mode)
+
 async function ollamaJSON({ model = OLLAMA_MODEL, prompt, jsonSchemaHint }) {
   const body = {
     model,
@@ -66,7 +66,7 @@ ${jsonSchemaHint || ""}`,
   }
 
   try {
-    // === MEJORA: Añadir console.error para debug si el LLM falla ===
+    
     const responseText = data.response;
     try {
       return JSON.parse(responseText);
@@ -79,19 +79,19 @@ ${jsonSchemaHint || ""}`,
   }
 }
 
-// --- Normaliza letras a A/B/C/D
+
 function letraABCD(s) {
   if (!s) return null;
   const m = String(s).trim().match(/^[\(\s]*([a-dA-D])\b/);
   return m ? m[1].toUpperCase() : null;
 }
 
-// --- Helpers para respuestas abiertas (MEJORA: Limpieza Agresiva de Etiquetas)
+
 function limpiarLinea(s) {
-  // 1. Reemplaza múltiples espacios por uno solo
+  
   let limpio = String(s || "").replace(/\s+/g, " ").trim();
 
-  // 2. Elimina etiquetas de formato comunes (caso-insensible y global)
+  
   limpio = limpio
     .replace(/\bProcedimiento\s*:\s*/gi, "")
     .replace(/\bResultado Final\s*:\s*/gi, "")
@@ -99,17 +99,17 @@ function limpiarLinea(s) {
     .replace(/\bRespuesta Oficial\s*:\s*/gi, "")
     .trim();
 
-  // 3. Limpieza de caracteres de inicio (tu lógica original)
+  
   return limpio
     .replace(/^[:\-–]\s*/, "")
     .trim();
 }
 
-// --------------------------------------------------------------------------------------
-// PARSERS DETERMINISTAS (globales, sin funciones anidadas)
-// --------------------------------------------------------------------------------------
 
-// Divide el texto por preguntas: "1.", "2)", "3 -", o "Pregunta 1:"
+
+
+
+
 function partirPorPreguntas(texto) {
   const re = /(^\s*(?:pregunta\s*)?(\d{1,3})\s*[\)\.\-:])/gmi;
   const out = [];
@@ -129,7 +129,7 @@ function partirPorPreguntas(texto) {
   return out;
 }
 
-// Extrae plano: "Pregunta N ... Respuesta: <texto>" (aunque falle partirPorPreguntas)
+
 function extraerQResPlano(texto) {
   const res = [];
   const re = /pregunta\s*(\d{1,3})\s*[:\)\.\-][\s\S]*?respuesta\s*:\s*(.+?)(?=(?:\n\s*pregunta\s*\d{1,3}\s*[:\)\.\-]|$))/gmi;
@@ -139,10 +139,10 @@ function extraerQResPlano(texto) {
     const respuesta_texto = limpiarLinea(m[2]);
     if (Number.isInteger(numero) && respuesta_texto) res.push({ numero, respuesta_texto });
   }
-  return res; // [{numero, respuesta_texto}]
+  return res; 
 }
 
-// ABIERTO: "Respuesta: <texto>" (descarta si es solo A/B/C/D)
+
 function extraerRespuestasTextoPorRegex(texto) {
   const bloques = partirPorPreguntas(texto);
   const result = [];
@@ -154,7 +154,7 @@ function extraerRespuestasTextoPorRegex(texto) {
         const linea = m[m.length - 1].split(":")[1];
         const textoRes = limpiarLinea(linea);
         if (textoRes) {
-          // Si EMPIEZA con A-D (con o sin texto), la consideramos CERRADA → no la ponemos como abierta
+          
           const empiezaConLetra = /^[\s\(\[\{]*([a-dA-D])[\s\)\]\}\.:;\-]/m.test(textoRes);
           if (!empiezaConLetra) {
             result.push({ numero: b.n, respuesta_texto: textoRes });
@@ -165,7 +165,7 @@ function extraerRespuestasTextoPorRegex(texto) {
     return result;
   }
 
-  // Sin bloques → modo plano
+  
   const plano = extraerQResPlano(texto);
   return plano.filter(it => {
     const t = it.respuesta_texto || "";
@@ -175,7 +175,7 @@ function extraerRespuestasTextoPorRegex(texto) {
 }
 
 
-// CERRADA: "Respuesta: A/B/C/D" (solo letra pura)
+
 function extraerRespuestasCerradasPorRegex(texto) {
   const bloques = partirPorPreguntas(texto);
   const result = [];
@@ -202,7 +202,7 @@ function extraerRespuestasCerradasPorRegex(texto) {
     .filter(it => !!it.respuesta);
 }
 
-// --- Map por número
+
 function mapearPorNumero(arr, campo = "numero") {
   const m = new Map();
   for (const it of arr || []) {
@@ -211,15 +211,15 @@ function mapearPorNumero(arr, campo = "numero") {
   return m;
 }
 
-// --------------------------------------------------------------------------------------
-// EXTRACCIÓN DOCENTE / ALUMNO
-// --------------------------------------------------------------------------------------
 
-// extrae la CLAVE del examen (del PDF del docente) soportando cerradas y abiertas
+
+
+
+
 async function extraerClaveDesdeTextoLLM(texto) {
-  // 1) saca ambas por regex
-  const rxCerradas = extraerRespuestasCerradasPorRegex(texto);  // [{numero, respuesta}]
-  const rxAbiertas = extraerRespuestasTextoPorRegex(texto);    // [{numero, respuesta_texto}]
+  
+  const rxCerradas = extraerRespuestasCerradasPorRegex(texto);  
+  const rxAbiertas = extraerRespuestasTextoPorRegex(texto);    
 
   if (rxCerradas.length || rxAbiertas.length) {
     const m = new Map();
@@ -235,13 +235,13 @@ async function extraerClaveDesdeTextoLLM(texto) {
       });
     }
     for (const r of rxCerradas) {
-      // si existe abierta del mismo número, la cerrada pisa (preferimos cerrada)
+      
       m.set(r.numero, {
         numero: r.numero,
         tipo: "cerrada",
         enunciado: "",
         alternativas: [],
-        respuesta_correcta: r.respuesta, // "A"|"B"|"C"|"D"
+        respuesta_correcta: r.respuesta, 
         respuesta_correcta_texto: null
       });
     }
@@ -249,7 +249,7 @@ async function extraerClaveDesdeTextoLLM(texto) {
     return [...m.values()].sort((a, b) => a.numero - b.numero);
   }
 
-  // 2) Fallback LLM (igual que antes)
+  
   console.warn("[ExtractorClave] Cayendo a LLM fallback");
   const prompt = `
 Eres un extractor estricto de CLAVE DE RESPUESTAS desde un examen en texto.
@@ -260,7 +260,7 @@ ${texto}
 # Ejemplo:
 {"preguntas":[{"numero":1,"tipo":"cerrada","respuesta_correcta":"B"}]}
 `;
-  // === MEJORA: Incluir ejemplo de abierta para guiar al LLM ===
+  
   const schemaHint = `{"preguntas":[{"numero":1,"tipo":"cerrada","respuesta_correcta":"B"},{"numero":2,"tipo":"abierta","respuesta_correcta_texto":"el proceso es..."}]}`;
   const out = await ollamaJSON({ prompt, jsonSchemaHint: schemaHint });
   const preguntas = Array.isArray(out.preguntas) ? out.preguntas : [];
@@ -277,9 +277,9 @@ ${texto}
 }
 
 
-// extrae RESPUESTAS DEL ALUMNO (desde su PDF) soportando cerradas y abiertas
+
 async function extraerResAlumnoDesdeTextoLLM(texto) {
-  // 1) Cerradas por regex
+  
   const rxCerradas = extraerRespuestasCerradasPorRegex(texto);
   const arrCerradas = rxCerradas.map(r => ({
     numero: r.numero,
@@ -289,7 +289,7 @@ async function extraerResAlumnoDesdeTextoLLM(texto) {
     justificacion: ""
   }));
 
-  // 2) Abiertas por regex
+  
   const rxAbiertas = extraerRespuestasTextoPorRegex(texto).map(r => ({
     numero: r.numero,
     tipo: "abierta",
@@ -299,21 +299,21 @@ async function extraerResAlumnoDesdeTextoLLM(texto) {
   }));
 
   if (arrCerradas.length > 0 || rxAbiertas.length > 0) {
-    // Unimos por numero (si hay doble, priorizamos cerrada explícita)
+    
     const m = new Map();
-    // === MEJORA: Cambiamos el orden para que la CERRADA pise a la abierta, según la lógica deseada ===
+    
     for (const it of [...rxAbiertas, ...arrCerradas]) m.set(it.numero, it);
     return [...m.values()].sort((a, b) => a.numero - b.numero);
   }
 
-  // Asegurar que siempre sea un array vacío si no se encuentran respuestas
+  
   return [];
 }
 
 
-// --------------------------------------------------------------------------------------
-// PUNTUACIÓN ABIERTA (Mejorada: Detecta tipo y genera Feedback único)
-// --------------------------------------------------------------------------------------
+
+
+
 
 async function puntuarAbiertaLLM({ numero, enunciado, respuestaDocente, respuestaAlumno }) {
   const esConceptual =
@@ -393,9 +393,9 @@ ${respuestaAlumno}
   }
 }
 
-// --------------------------------------------------------------------------------------
-// CALIFICACIÓN (paralelizada)
-// --------------------------------------------------------------------------------------
+
+
+
 
 async function calificar(preguntasClave, respuestasAlumno) {
   const mapaAlumno = mapearPorNumero(respuestasAlumno);
@@ -404,7 +404,7 @@ async function calificar(preguntasClave, respuestasAlumno) {
 
   const valor = 20 / total;
 
-  // Prepara evaluaciones sin bloquear
+  
   const evaluaciones = preguntasClave.map((p) => {
     const r = mapaAlumno.get(p.numero);
 
@@ -435,7 +435,7 @@ async function calificar(preguntasClave, respuestasAlumno) {
         feedback: acierto ? "" : "Respuesta incorrecta."
       });
     } else {
-      // ABIERTA
+      
       const respDoc = p.respuesta_correcta_texto || "";
       const respAlu = r.respuesta_alumno_texto || "";
       return puntuarAbiertaLLM({
@@ -470,10 +470,10 @@ async function calificar(preguntasClave, respuestasAlumno) {
   const acumulado = detalle.reduce((s, d) => s + (d.puntaje || 0), 0);
   const correctas = detalle.reduce((s, d) => s + (d.puntaje === 1 ? 1 : 0), 0);
 
-  // === NUEVO: Calcular las parciales ===
+  
   const parciales = detalle.reduce((s, d) => s + (d.puntaje > 0 && d.puntaje < 1 ? 1 : 0), 0);
-  // ===
-  const incorrectas = total - correctas - parciales; // Por si acaso
+  
+  const incorrectas = total - correctas - parciales; 
 
   const nota = Math.round((acumulado * valor) * 100) / 100;
   return {
@@ -488,18 +488,18 @@ async function calificar(preguntasClave, respuestasAlumno) {
 }
 
 function veredicto(prom, cursoNombre, respuestasDetalle) {
-  // Verificar que respuestasDetalle es un array
+  
   if (!Array.isArray(respuestasDetalle)) {
     console.error("Error: respuestasDetalle debe ser un array.");
     throw new Error("respuestasDetalle debe ser un array.");
   }
-  // Continuar con la lógica del veredicto
+  
   let mensaje = "";
   let recomendacion = "";
   let errorGrave = false;
   let erroresPorTema = {};
 
-  // Detecta errores graves como contradicciones con la respuesta del profesor
+  
   respuestasDetalle.forEach((detalle) => {
     if (detalle.acierto === false) {
       if (detalle.tipo === "cerrada" && detalle.alumno !== detalle.correcta) {
@@ -519,7 +519,7 @@ function veredicto(prom, cursoNombre, respuestasDetalle) {
     }
   });
 
-  // Continuar con la clasificación según el promedio y recomendaciones
+  
   if (prom == null) {
     mensaje = `No hay historial suficiente para el curso ${cursoNombre}.`;
     recomendacion = "Por favor, asegúrese de tener suficientes evaluaciones registradas para poder proporcionar un análisis adecuado.";
@@ -537,7 +537,7 @@ function veredicto(prom, cursoNombre, respuestasDetalle) {
     recomendacion = "Es recomendable que el alumno reciba apoyo adicional, tal vez con tutorías o material de repaso, para mejorar la comprensión de los conceptos básicos.";
   }
 
-  // Si hubo errores graves, los detallamos y damos recomendaciones específicas
+  
   if (errorGrave) {
     mensaje += " Se detectaron errores significativos en las respuestas. ";
     let erroresDetalle = [];
@@ -550,9 +550,9 @@ function veredicto(prom, cursoNombre, respuestasDetalle) {
   return `${mensaje} ${recomendacion}`;
 }
 
-// --------------------------------------------------------------------------------------
-// API principal
-// --------------------------------------------------------------------------------------
+
+
+
 
 export default async function evaluarAutomaticoLLM(evaluacionId) {
   const db = await openDb();
@@ -569,27 +569,27 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
   );
   if (!ex) throw new Error("Examen base no encontrado");
 
-  // Lee PDFs a texto
+  
   const baseAbs = path.resolve(process.cwd(), ex.archivo);
   const alumAbs = path.resolve(process.cwd(), ev.archivo_resuelto);
   const textoBase = await leerPDF(baseAbs);
   const textoAlumno = await leerPDF(alumAbs);
 
-  // Extrae con parsers / LLM
+  
   const preguntasClave = await extraerClaveDesdeTextoLLM(textoBase);
   const respuestasAlumno = await extraerResAlumnoDesdeTextoLLM(textoAlumno);
-  console.log("respuestasAlumno:", respuestasAlumno);  // Verifica que esto es un array
-  const respuestasDetalle = Array.isArray(respuestasAlumno) ? respuestasAlumno : []; // Aseguramos que siempre sea un array
+  console.log("respuestasAlumno:", respuestasAlumno);  
+  const respuestasDetalle = Array.isArray(respuestasAlumno) ? respuestasAlumno : []; 
 
-  // Ahora pasamos respuestasDetalle a la función veredicto
+  
 
-  // Califica
+  
   const score = await calificar(preguntasClave, respuestasAlumno);
 
-  // Guarda nota
+  
   await db.run(`UPDATE evaluaciones SET nota = ? WHERE id = ?`, [score.nota, ev.id]);
 
-  // Detalle JSON
+  
   await db.exec(`
     CREATE TABLE IF NOT EXISTS evaluacion_detalles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -614,7 +614,7 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
     [ev.id, JSON.stringify(resumen)]
   );
 
-  // Veredicto por histórico
+  
   const rowProm = await db.get(
     `
     SELECT AVG(eva.nota) AS prom
@@ -627,16 +627,16 @@ export default async function evaluarAutomaticoLLM(evaluacionId) {
     [ev.estudiante_id, ex.curso_id]
   );
   
-  // Obtener el promedio del alumno
+  
 const prom = rowProm?.prom != null ? Number(rowProm.prom) : null;
 
-// Obtener el nombre del curso asociado al examen
+
 const curso = await db.get(`SELECT nombre FROM cursos WHERE id = ?`, [ex.curso_id]);
 
-// 🔹 Asegurar que el nombre sea limpio y tenga respaldo
+
 const cursoNombre = curso?.nombre?.trim() || ex.nombre?.split(" ")[0] || "curso actual";
 
-// Veredicto basado en la calificación del examen actual
+
 const msg = veredicto(score.nota, cursoNombre, respuestasDetalle);
 
 

@@ -21,17 +21,11 @@ ChartJS.register(
   Legend
 );
 
-/**
- * Props esperadas:
- *  datos = [
- *    { curso: "Matemática", examen: "Examen Bimestral 1", nota: 15, veredicto: "Aprobado" },
- *    { curso: "Comunicación", examen: "Evaluación Final", nota: 18, veredicto: "Excelente" },
- *  ]
- */
-export default function RadarChart({ datos = [] }) {
-  console.log("📊 Datos recibidos en RadarChart:", datos); // 👈 agrega esta línea
 
-  // Etiquetas (eje X) y valores (eje Y)
+export default function RadarChart({ datos = [] }) {
+  console.log("📊 Datos recibidos en RadarChart:", datos); 
+
+  
   const labels = datos.map((d) => `${d.curso} — ${d.examen}`);
   const valores = datos.map((d) => d.nota ?? 0);
   const veredictos = datos.map((d) => d.veredicto ?? null);
@@ -45,7 +39,7 @@ export default function RadarChart({ datos = [] }) {
         fill: false,
         borderColor: "#004d8f",
         backgroundColor: "#004d8f",
-        tension: 0.3,            // suaviza la línea
+        tension: 0.3,            
         pointRadius: 5,
         pointHoverRadius: 7,
       },
@@ -55,7 +49,7 @@ export default function RadarChart({ datos = [] }) {
   const options = {
     responsive: true,
 
-    // Mejora el comportamiento del hover/tooltip
+    
     interaction: {
       mode: "nearest",
       intersect: true,
@@ -69,10 +63,10 @@ export default function RadarChart({ datos = [] }) {
         },
       },
       tooltip: {
-        displayColors: false, // tooltip más limpio
+        displayColors: false, 
         callbacks: {
           title: (items) => labels[items[0].dataIndex],
-          // Devuelve varias líneas en el mismo tooltip
+          
           label: (item) => {
             const v = veredictos[item.dataIndex];
             if (v) return [`Nota: ${item.formattedValue}`, `Veredicto: ${v}`];
@@ -85,7 +79,7 @@ export default function RadarChart({ datos = [] }) {
     scales: {
       y: {
         min: 0,
-        max: 20, // escala de notas en 0-20
+        max: 20, 
         ticks: {
           stepSize: 2,
           color: "#666",

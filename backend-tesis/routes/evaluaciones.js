@@ -28,15 +28,15 @@ const upload = multer({
   },
 });
 
-// POST /evaluaciones  (multipart)
-// fields: examen_id, estudiante_id, docente_id, archivo_resuelto (pdf)
+
+
 router.post("/", upload.single("archivo_resuelto"), async (req, res) => {
   try {
     const examen_id = Number(req.body?.examen_id);
     const estudiante_id = Number(req.body?.estudiante_id);
-    const docente_id = Number(req.body?.docente_id); // <-- nuevo
+    const docente_id = Number(req.body?.docente_id); 
 
-    // Validaciones
+    
     if (!Number.isInteger(examen_id) || !Number.isInteger(estudiante_id) || !Number.isInteger(docente_id)) {
       if (req.file) fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "examen_id, estudiante_id y docente_id requeridos" });
@@ -47,7 +47,7 @@ router.post("/", upload.single("archivo_resuelto"), async (req, res) => {
 
     const db = await openDb();
 
-    // Validar existencia de examen, estudiante y docente
+    
     const ex = await db.get("SELECT id FROM examenes WHERE id = ?", [examen_id]);
     if (!ex) {
       fs.unlinkSync(req.file.path);
@@ -64,8 +64,8 @@ router.post("/", upload.single("archivo_resuelto"), async (req, res) => {
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "docente_id no existe" });
     }
 
-    // Insertar la evaluación con docente_id
-// Insertar la evaluación con tutor o docente
+    
+
 let r;
 
 if (req.body.tutor_id) {
@@ -116,15 +116,15 @@ router.post("/:id/auto", async (req, res) => {
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "id inválido" });
     }
 
-    // Llamar al evaluador automático (Hermes)
+    
     const out = await evaluarAutomaticoLLM(id);
 
-    // out debería devolver algo como:
-    // { nota: 14.5, veredicto: "El alumno necesita refuerzo en el tema de microbiología" }
+    
+    
 
     const db = await openDb();
 
-    // Guardamos los resultados en la tabla evaluaciones
+    
     await db.run(
       `UPDATE evaluaciones SET nota = ?, veredicto = ? WHERE id = ?`,
       [out.nota ?? null, out.veredicto ?? null, id]
@@ -139,9 +139,9 @@ router.post("/:id/auto", async (req, res) => {
 });
 
 
-// --- tus endpoints POST ya existentes aquí ---
 
-// 📊 NUEVO: obtener promedio general por estudiante
+
+
 router.get("/metricas/estudiantes", async (req, res) => {
   try {
     const db = await openDb();
@@ -162,7 +162,7 @@ router.get("/metricas/estudiantes", async (req, res) => {
   }
 });
 
-// 📊 NUEVO: promedio por curso de cada estudiante
+
 router.get("/metricas/curso", async (req, res) => {
   try {
     const db = await openDb();
@@ -186,7 +186,7 @@ router.get("/metricas/curso", async (req, res) => {
   }
 });
 
-// 📊 NUEVO: promedio por aula (rendimiento global)
+
 router.get("/metricas/aulas", async (req, res) => {
   try {
     const db = await openDb();
@@ -207,8 +207,8 @@ router.get("/metricas/aulas", async (req, res) => {
   }
 });
 
-// GET /evaluaciones/resultados?docenteId=4&aulaId=123
-// GET /evaluaciones/resultados?docenteId=4&aulaId=123
+
+
 router.get("/resultados", async (req, res) => {
   try {
     const docenteId = Number(req.query.docenteId);
@@ -220,7 +220,7 @@ router.get("/resultados", async (req, res) => {
 
     const db = await openDb();
 
-    // 1) Trae evaluaciones del docente en el aula
+    
     const evals = await db.all(`
       SELECT
         ev.id                 AS evaluacion_id,
@@ -241,7 +241,7 @@ router.get("/resultados", async (req, res) => {
 
     if (evals.length === 0) return res.json([]);
 
-    // 2) Obtén el ÚLTIMO evaluacion_detalles por evaluación en un solo query
+    
     const ids = evals.map(r => r.evaluacion_id);
     const placeholders = ids.map(() => '?').join(',');
     const detallesRows = await db.all(
@@ -260,13 +260,13 @@ router.get("/resultados", async (req, res) => {
 
     const mapDetalle = new Map(detallesRows.map(r => [r.evaluacion_id, r.resumen_json]));
 
-    // 3) Arma salida con parciales
+    
     const out = evals.map(r => {
       const raw = mapDetalle.get(r.evaluacion_id);
       let total_correctas = 0, total_parciales = 0, total_incorrectas = 0;
       const preguntas_correctas = [];
       const preguntas_parciales = [];
-      const preguntas_marcadas = []; // [{numero, marcado}]
+      const preguntas_marcadas = []; 
 
       if (raw) {
         try {
@@ -276,8 +276,8 @@ router.get("/resultados", async (req, res) => {
 
           for (const p of preguntas) {
             const num = Number(p?.numero);
-            const puntaje = Number(p?.puntaje ?? 0); // 0..1
-            // Estado tri: correcta (=1), parcial (>0 y <1), incorrecta (=0)
+            const puntaje = Number(p?.puntaje ?? 0); 
+            
             if (puntaje >= 1 - 1e-6) {
               total_correctas += 1;
               if (Number.isInteger(num)) preguntas_correctas.push(num);
@@ -288,14 +288,14 @@ router.get("/resultados", async (req, res) => {
               total_incorrectas += 1;
             }
 
-            // “Marcadas”: lo que contestó el alumno (letra o texto)
+            
             if (Number.isInteger(num)) {
               const marcado = (p?.alumno ?? "").toString().trim();
               if (marcado.length) preguntas_marcadas.push({ numero: num, marcado });
             }
           }
         } catch (_e) {
-          // si el JSON está malformado, deja los contadores en 0
+          
         }
       }
 
@@ -306,7 +306,7 @@ router.get("/resultados", async (req, res) => {
         nota: r.nota,
         veredicto: r.veredicto ?? null,
 
-        // NUEVOS CAMPOS:
+        
         total_correctas,
         total_parciales,
         total_incorrectas,
@@ -325,7 +325,7 @@ router.get("/resultados", async (req, res) => {
 });
 
 
-/// GET /evaluaciones/resultados/tutor?tutorId=1&aulaId=123
+
 router.get("/resultados/tutor", async (req, res) => {
   try {
     const tutorId = Number(req.query.tutorId);
@@ -340,7 +340,7 @@ router.get("/resultados/tutor", async (req, res) => {
 
     const db = await openDb();
 
-    // 1) Trae evaluaciones del tutor en el aula
+    
     const evals = await db.all(`
       SELECT
         ev.id                 AS evaluacion_id,
@@ -361,7 +361,7 @@ router.get("/resultados/tutor", async (req, res) => {
 
     if (evals.length === 0) return res.json([]);
 
-    // 2) Obtén el ÚLTIMO evaluacion_detalles por evaluación
+    
     const ids = evals.map(r => r.evaluacion_id);
     const placeholders = ids.map(() => "?").join(",");
     const detallesRows = await db.all(`
@@ -379,7 +379,7 @@ router.get("/resultados/tutor", async (req, res) => {
       detallesRows.map(r => [r.evaluacion_id, r.resumen_json])
     );
 
-    // 3) Construye salida final
+    
     const out = evals.map(r => {
       const raw = mapDetalle.get(r.evaluacion_id);
       let total_correctas = 0,
@@ -489,7 +489,7 @@ router.get("/resultados/tutor/por-curso", async (req, res) => {
       alumno.cantidad++;
     });
 
-    // Calcular promedio por estudiante y limpiar propiedades intermedias
+    
     for (const curso in resultado) {
       for (const estudianteId in resultado[curso]) {
         const alumno = resultado[curso][estudianteId];
@@ -521,7 +521,7 @@ router.get("/resultados/tutor/por-curso-detalle", async (req, res) => {
 
     const db = await openDb();
 
-    // Traer evaluaciones por tutor y aula
+    
     const rows = await db.all(`
       SELECT
         c.nombre AS curso_nombre,
@@ -541,7 +541,7 @@ router.get("/resultados/tutor/por-curso-detalle", async (req, res) => {
 
     if (rows.length === 0) return res.json({});
 
-    // Agrupar por curso y luego por estudiante
+    
     const resultado = {};
 
     rows.forEach(r => {

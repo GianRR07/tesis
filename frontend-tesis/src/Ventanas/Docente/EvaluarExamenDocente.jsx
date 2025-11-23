@@ -4,7 +4,7 @@ import { getDocenteIdPreferido } from "../../utils/session";
 
 
 
-// Modal de resultado
+
 function ResultadoModal({ open, onClose, data }) {
   if (!open) return null;
   const { nota, veredicto, preguntas = [] } = data || {};
@@ -57,7 +57,6 @@ function ResultadoModal({ open, onClose, data }) {
                           {p.tipo === "abierta" ? "Abierta" : "Cerrada"}
                         </td>
                         <td className="p-2">
-                          {/* Texto largo con wrap */}
                           <div className="max-w-[22rem] break-words">
                             {p.correcta ?? "—"}
                           </div>
@@ -71,11 +70,11 @@ function ResultadoModal({ open, onClose, data }) {
                           {typeof p.puntos === "number" ? p.puntos.toFixed(2) : "—"}
                         </td>
                         <td className="p-2">
-                          {p.puntaje === 1 // ¿Puntaje máximo?
-                            ? "✔️" // Correcto
-                            : p.puntaje > 0 // ¿Puntaje mayor que cero (pero menor que 1)?
-                              ? "◐" // Parcial
-                              : "❌" // Incorrecto (cero)
+                          {p.puntaje === 1 
+                            ? "✔️" 
+                            : p.puntaje > 0 
+                              ? "◐" 
+                              : "❌" 
                           }
                         </td>                        <td className="p-2">
                           <div className="max-w-[20rem] break-words text-gray-600">
@@ -102,28 +101,28 @@ function ResultadoModal({ open, onClose, data }) {
 export default function EvaluarExamenDocente() {
   const docenteId = getDocenteIdPreferido();
 
-  const [aulas, setAulas] = useState([]);            // [{id,nombre,grado,seccion,cursos:[{id,nombre,docente_id,docente_nombre}]}]
+  const [aulas, setAulas] = useState([]);            
   const [aulaId, setAulaId] = useState("");
-  const [cursosAula, setCursosAula] = useState([]);  // cursos filtrados para este docente
+  const [cursosAula, setCursosAula] = useState([]);  
   const [cursoId, setCursoId] = useState("");
 
-  const [estudiantes, setEstudiantes] = useState([]); // [{id,nombre}]
+  const [estudiantes, setEstudiantes] = useState([]); 
   const [estudianteId, setEstudianteId] = useState("");
 
   const [examenNombre, setExamenNombre] = useState("");
-  const [archivoExamenBase, setArchivoExamenBase] = useState(null); // PDF preguntas
-  const [examenId, setExamenId] = useState(null); // id del examen creado (respuesta backend)
+  const [archivoExamenBase, setArchivoExamenBase] = useState(null); 
+  const [examenId, setExamenId] = useState(null); 
 
-  const [archivoExamenAlumno, setArchivoExamenAlumno] = useState(null); // PDF resuelto
+  const [archivoExamenAlumno, setArchivoExamenAlumno] = useState(null); 
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
 
 
-  // Modal de resultado
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [resultado, setResultado] = useState(null);
 
-  // Ref para limpiar el input file del alumno
+  
   const fileAlumnoRef = useRef(null);
 
 
@@ -131,7 +130,7 @@ export default function EvaluarExamenDocente() {
 
 
 
-  // 1) Cargar aulas donde enseña el DOCENTE
+  
   useEffect(() => {
     async function cargarAulas() {
       setErr("");
@@ -152,7 +151,7 @@ export default function EvaluarExamenDocente() {
     cargarAulas();
   }, [docenteId]);
 
-  // 2) Cuando cambia el aula: preparar cursos del aula asignados a este docente y cargar estudiantes
+  
   useEffect(() => {
     setCursosAula([]);
     setCursoId("");
@@ -164,19 +163,19 @@ export default function EvaluarExamenDocente() {
     setOk("");
     if (!aulaId) return;
 
-    // filtrar cursos del aula que son de este docente
-    // Cursos del aula para este docente (maneja string vs array)
+    
+    
     (async () => {
       try {
         const aula = aulas.find(a => a.id === Number(aulaId));
 
         if (Array.isArray(aula?.cursos)) {
-          // Caso ideal: ya viene como array [{id,nombre,docente_id,...}]
+          
           const cursos = aula.cursos.filter(c => c.docente_id === Number(docenteId));
           setCursosAula(cursos);
         } else {
-          // Fallback: /docentes/:id/aulas trae cursos como string (GROUP_CONCAT)
-          // Pedimos /aulas (que sí trae cursos como array) y filtramos allí.
+          
+          
           const rAll = await fetch(`${import.meta.env.VITE_API_URL}/aulas`);
           const allAulas = await rAll.json();
           if (!rAll.ok) throw new Error(allAulas?.message || "No se pudieron cargar aulas detalladas.");
@@ -192,7 +191,7 @@ export default function EvaluarExamenDocente() {
     })();
 
 
-    // cargar estudiantes del aula
+    
     (async () => {
       try {
         const r = await fetch(`${import.meta.env.VITE_API_URL}/docentes/${docenteId}/estudiantes?aulaId=${aulaId}`);
@@ -205,7 +204,7 @@ export default function EvaluarExamenDocente() {
     })();
   }, [aulaId, aulas, docenteId]);
 
-  // 3) Subir EXAMEN BASE (PDF con preguntas) -> crea registro en `examenes`
+  
   async function subirExamenBase() {
     try {
       setErr("");
@@ -218,7 +217,7 @@ export default function EvaluarExamenDocente() {
       const form = new FormData();
       form.append("nombre", examenNombre.trim());
       form.append("curso_id", String(cursoId));
-      form.append("archivo", archivoExamenBase); // campo esperado por backend
+      form.append("archivo", archivoExamenBase); 
 
       const r = await fetch(`${import.meta.env.VITE_API_URL}/examenes`, {
         method: "POST",
@@ -226,7 +225,7 @@ export default function EvaluarExamenDocente() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.message || "No se pudo crear el examen.");
-      setExamenId(data.id); // guardar id del examen creado
+      setExamenId(data.id); 
       setOk(`Examen (respuestas correctas) registrado con ID ${data.id}. Ya puedes cargar el examen del alumno.`);
     } catch (e) {
       setErr(e.message);
@@ -236,14 +235,14 @@ export default function EvaluarExamenDocente() {
   function cerrarModalYLimpiar() {
     setModalOpen(false);
     setResultado(null);
-    // limpiar alumno
+    
     setEstudianteId("");
-    // limpiar archivo del alumno
+    
     setArchivoExamenAlumno(null);
     if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
   }
 
-  // 4) Subir EXAMEN RESUELTO DEL ALUMNO (PDF) -> crea registro en `evaluaciones`
+  
   async function subirExamenAlumno() {
     try {
       setErr("");
@@ -272,7 +271,7 @@ export default function EvaluarExamenDocente() {
         console.log("FormData:", key, value);
       }
 
-      // 1) Crear evaluación
+      
       const r = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones`, {
         method: "POST",
         body: form,
@@ -280,14 +279,14 @@ export default function EvaluarExamenDocente() {
       const data = await r.json();
       if (!r.ok) throw new Error(data?.message || "No se pudo registrar la evaluación.");
 
-      // 2) Ejecutar auto-evaluación
+      
       const rAuto = await fetch(`${import.meta.env.VITE_API_URL}/evaluaciones/${data.id}/auto`, {
         method: "POST",
       });
       const resAuto = await rAuto.json();
       if (!rAuto.ok) throw new Error(resAuto?.message || "No se pudo evaluar automáticamente.");
 
-      // 3) Mostrar resultado
+      
       setResultado({
         nota: resAuto.nota,
         veredicto: resAuto.veredicto,
@@ -296,7 +295,7 @@ export default function EvaluarExamenDocente() {
       });
       setModalOpen(true);
 
-      // 4) Limpieza
+      
       setArchivoExamenAlumno(null);
       if (fileAlumnoRef.current) fileAlumnoRef.current.value = "";
       setOk("");
@@ -304,7 +303,7 @@ export default function EvaluarExamenDocente() {
     } catch (e) {
       setErr(e.message);
     } finally {
-      setCargando(false); // siempre apagar el overlay
+      setCargando(false); 
     }
   }
 
@@ -331,7 +330,6 @@ export default function EvaluarExamenDocente() {
         </select>
       </div>
 
-      {/* Selección de Curso (del aula, asignado a este docente) */}
       <div className="mb-4">
         <label className="block font-medium text-gray-700">Seleccione el curso:</label>
         <select
@@ -347,7 +345,6 @@ export default function EvaluarExamenDocente() {
         </select>
       </div>
 
-      {/* Cargar EXAMEN BASE (PDF con preguntas) */}
       <div className="mb-6">
         <label className="block font-medium text-gray-700">Nombre del examen:</label>
         <input
@@ -393,7 +390,6 @@ export default function EvaluarExamenDocente() {
         </select>
       </div>
 
-      {/* Cargar EXAMEN DEL ALUMNO (PDF resuelto) */}
       <div className="mb-6">
         <label className="block font-medium text-gray-700">Cargar examen del alumno (PDF):</label>
         <input

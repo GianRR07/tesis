@@ -15,7 +15,7 @@ export default function RegistrarCurso() {
         const res = await fetch(import.meta.env.VITE_API_URL + "/docentes");
         if (!res.ok) throw new Error("No se pudo obtener la lista de docentes");
         const data = await res.json();
-        // Solo necesitamos id y nombre para el select
+        
         const soloNombre = data.map(d => ({ id: d.id, nombre: d.nombre }));
         setDocentes(soloNombre);
       } catch (e) {
@@ -59,7 +59,6 @@ export default function RegistrarCurso() {
       <h2 className="text-2xl font-bold mb-6 text-[#004d8f]">Registro de Curso</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Nombre del curso */}
         <div>
           <label className="block font-medium text-gray-700">Nombre del curso:</label>
           <input
@@ -71,7 +70,6 @@ export default function RegistrarCurso() {
           />
         </div>
 
-        {/* Selección de docente */}
         <div>
           <label className="block font-medium text-gray-700">Docente:</label>
           {loading ? (
@@ -94,7 +92,6 @@ export default function RegistrarCurso() {
           )}
         </div>
 
-        {/* Botón */}
         <div className="flex justify-end">
           <button
             type="submit"

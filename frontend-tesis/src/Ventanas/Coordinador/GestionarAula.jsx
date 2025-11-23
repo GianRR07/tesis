@@ -5,9 +5,9 @@ export default function GestionarAula() {
   const [grado, setGrado] = useState("");
   const [seccion, setSeccion] = useState("");
 
-  const [cursos, setCursos] = useState([]);     // [{id, nombre, docente_id}]
-  const [docentes, setDocentes] = useState([]); // [{id, nombre}]
-  const [seleccion, setSeleccion] = useState({}); // { [cursoId]: { checked: boolean } }
+  const [cursos, setCursos] = useState([]);     
+  const [docentes, setDocentes] = useState([]); 
+  const [seleccion, setSeleccion] = useState({}); 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
@@ -29,7 +29,7 @@ export default function GestionarAula() {
         setCursos(dataCursos);
         setDocentes(dataDocentes.map(d => ({ id: d.id, nombre: d.nombre })));
 
-        // base de selección (sin docente editable)
+        
         const base = {};
         for (const c of dataCursos) base[c.id] = { checked: false };
         setSeleccion(base);
@@ -58,7 +58,7 @@ export default function GestionarAula() {
       return;
     }
 
-    // Construir payload de cursos seleccionados
+    
     const cursosSeleccionados = cursos
       .filter(c => seleccion[c.id]?.checked)
       .map(c => c.id);
@@ -66,7 +66,7 @@ export default function GestionarAula() {
       alert("Hay un curso seleccionado con ID inválido.");
       return;
     }
-    // Opcional: ver en consola lo que se envía
+    
     console.log("Payload aulas:", { nombre, grado, seccion, cursos: cursosSeleccionados });
 
     try {
@@ -88,7 +88,7 @@ export default function GestionarAula() {
       setGrado("");
       setSeccion("");
 
-      // reconstruye la base de selección (todas desmarcadas)
+      
       setSeleccion(Object.fromEntries(cursos.map(c => [c.id, { checked: false }])));
 
       alert("Aula registrada correctamente.");
@@ -102,7 +102,6 @@ export default function GestionarAula() {
       <h2 className="text-2xl font-bold mb-6 text-gray-700">Registro de aulas</h2>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Columna izquierda */}
         <div className="space-y-4">
           <label className="block">
             <span className="font-medium">Nombre de aula:</span>
@@ -138,7 +137,6 @@ export default function GestionarAula() {
           </label>
         </div>
 
-        {/* Columna derecha: lista de cursos (2 columnas: Curso y Docente asignado — solo lectura) */}
         <div className="space-y-4">
           <span className="font-medium">Cursos del aula:</span>
 
@@ -191,7 +189,6 @@ export default function GestionarAula() {
         </div>
 
 
-        {/* Footer */}
         <div className="md:col-span-2 flex justify-end">
           <button
             type="submit"

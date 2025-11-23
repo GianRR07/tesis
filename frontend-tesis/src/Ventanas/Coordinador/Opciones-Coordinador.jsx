@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 
-// Importamos los componentes de cada opción
+
 import GestionarAula from "./GestionarAula";
 import RegistrarCurso from "./RegistrarCurso";
 import RegistrarDocente from "./RegistrarDocente";
@@ -23,14 +23,11 @@ export default function OpcionesCoordinador() {
 
   return (
     <div className="flex flex-col min-h-screen w-full">
-      {/* Header */}
       <header className="bg-[#004d8f] text-white text-center py-4 text-lg font-bold">
         Opciones de Coordinador
       </header>
 
-      {/* Layout */}
       <div className="flex flex-1">
-        {/* Sidebar */}
         <aside className="w-56 bg-[#004d8f] p-4 flex flex-col justify-between">
           <div className="flex flex-col space-y-3">
 
@@ -105,7 +102,6 @@ export default function OpcionesCoordinador() {
 
         </aside>
 
-        {/* Contenido principal */}
         <main className="flex-1 bg-gray-50 p-6">
           {active === "inicio" && (
             <div className="text-center text-gray-600 mt-10">

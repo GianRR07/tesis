@@ -3,10 +3,10 @@ import React, { useEffect, useState } from "react";
 export default function ListaDocentes() {
   const [docentes, setDocentes] = useState([]);
   const [cursos, setCursos] = useState([]);
-  const [aulas, setAulas] = useState([]);     // <- AGREGADO
+  const [aulas, setAulas] = useState([]);     
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [editDoc, setEditDoc] = useState(null); // {id,nombre,email,telefono,cursos_que_ensena,correo_ingreso}
+  const [editDoc, setEditDoc] = useState(null); 
   const [savingDoc, setSavingDoc] = useState(false);
 
   async function cargarDocentes() {
@@ -17,7 +17,7 @@ export default function ListaDocentes() {
       const [resDocentes, resCursos, resAulas] = await Promise.all([
         fetch(import.meta.env.VITE_API_URL + "/docentes"),
         fetch(import.meta.env.VITE_API_URL + "/cursos"),
-        fetch(import.meta.env.VITE_API_URL + "/aulas"), // <- AGREGADO
+        fetch(import.meta.env.VITE_API_URL + "/aulas"), 
       ]);
 
       if (!resDocentes.ok) throw new Error("No se pudo obtener la lista de docentes");
@@ -31,8 +31,8 @@ export default function ListaDocentes() {
       ]);
 
       setDocentes(dataDocentes);
-      setCursos(dataCursos);          // [{id, nombre, docente_id}, ...]
-      setAulas(dataAulas);            // [{id, nombre, grado, seccion, tutores:[{id,nombre}]}]
+      setCursos(dataCursos);          
+      setAulas(dataAulas);            
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -66,7 +66,7 @@ export default function ListaDocentes() {
         const t = await res.text();
         throw new Error(t || "No se pudo eliminar");
       }
-      // Actualiza la lista después de eliminar
+      
       setDocentes((prev) => prev.filter((d) => d.id !== id));
       alert("Docente eliminado.");
     } catch (e) {
@@ -103,13 +103,13 @@ export default function ListaDocentes() {
               </tr>
             ) : (
               docentes.map((doc) => {
-                // Cursos que puede enseñar (del campo texto del docente)
+                
                 const cursosPuede = (doc.cursos_que_ensena || "")
                   .split(/\r?\n/)
                   .map(s => s.trim())
                   .filter(Boolean);
 
-                // Cursos asignados (desde la tabla cursos por docente_id)
+                
                 const asignados = cursos
                   .filter(c => Number(c.docente_id) === Number(doc.id))
                   .map(c => c.nombre);
@@ -118,7 +118,6 @@ export default function ListaDocentes() {
                   <tr key={doc.id} className="hover:bg-gray-50">
                     <td className="border px-3 py-2">{doc.nombre}</td>
 
-                    {/* Cursos que puede enseñar */}
                     <td className="border px-3 py-2">
                       {cursosPuede.length === 0 ? (
                         "—"
@@ -136,7 +135,6 @@ export default function ListaDocentes() {
                       )}
                     </td>
 
-                    {/* Cursos asignados */}
                     <td className="border px-3 py-2">
                       {asignados.length === 0 ? (
                         "—"
@@ -198,7 +196,6 @@ export default function ListaDocentes() {
         </table>
       )}
 
-      {/* Modal editar docente */}
       {editDoc && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
@@ -285,7 +282,7 @@ export default function ListaDocentes() {
                       const t = await res.text();
                       throw new Error(t || "No se pudo actualizar el docente");
                     }
-                    const updated = await res.json(); // devuelve campos básicos
+                    const updated = await res.json(); 
                     setDocentes(prev =>
                       prev.map(d => (d.id === updated.id ? { ...d, ...updated } : d))
                     );

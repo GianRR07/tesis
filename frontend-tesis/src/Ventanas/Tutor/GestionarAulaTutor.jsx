@@ -22,9 +22,9 @@ export default function GestionarAulaTutor() {
     }
 
     try {
-      // ENDPOINT PROPUESTO:
-      // POST  /aulas/:aulaId/estudiantes/bulk
-      // body: { lista: "Nombre 1\nNombre 2\n..." }
+      
+      
+      
       const res = await fetch(`${import.meta.env.VITE_API_URL}/aulas/${aulaId}/estudiantes/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

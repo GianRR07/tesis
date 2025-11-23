@@ -1,4 +1,4 @@
-// backend-tesis/routes/auth.js
+
 import express from "express";
 import bcrypt from "bcryptjs";
 import { openDb } from "../db.js";
@@ -15,7 +15,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // 1) Coordinador fijo
+    
     if (email === "coordinador@edu.pe" && password === "soyadmin") {
       return res.json({
         userType: "coordinador",
@@ -26,7 +26,7 @@ router.post("/login", async (req, res) => {
 
     const db = await openDb();
 
-    // 2) Buscar DOCENTE por correo_ingreso
+    
     const docente = await db.get(
       `SELECT id, nombre, email, telefono, cursos_que_ensena, correo_ingreso, password_hash
        FROM docentes
@@ -48,7 +48,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // 3) Aulas donde es DOCENTE
+    
     const aulasDocente = await db.all(
       `
       SELECT a.id, a.nombre, a.grado, a.seccion
@@ -61,7 +61,7 @@ router.post("/login", async (req, res) => {
       [docente.id]
     );
 
-    // 4) Buscar si también es TUTOR
+    
     const emailNorm = (docente.email || "").trim();
     const tutor = await db.get(
       `SELECT id, nombre, email FROM tutores WHERE LOWER(email) = LOWER(?)`,
@@ -82,7 +82,7 @@ router.post("/login", async (req, res) => {
       );
     }
 
-    // 🔹 Construimos roles dinámicos
+    
     const roles = {
       docente: { id: docente.id, aulas: aulasDocente },
     };
@@ -90,7 +90,7 @@ router.post("/login", async (req, res) => {
       roles.tutor = { id: tutor.id, aulas: aulasTutor };
     }
 
-    // 5) Enviar respuesta
+    
     return res.json({
       userType: "docente",
       docente: {

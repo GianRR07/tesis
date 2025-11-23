@@ -10,7 +10,7 @@ export default function Login() {
   const [err, setErr] = useState("");
 
   const [selectOpen, setSelectOpen] = useState(false);
-  const [rolesInfo, setRolesInfo] = useState(null); // Info temporal de roles
+  const [rolesInfo, setRolesInfo] = useState(null); 
 
   const handleLogin = async () => {
     setErr("");
@@ -30,14 +30,14 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Credenciales inválidas");
 
-      // 🟢 Guardar toda la sesión
+      
       localStorage.setItem("session", JSON.stringify(data));
 
-      // --- Verificar roles ---
+      
       const esDocente = !!data?.roles?.docente;
       const esTutor = !!data?.roles?.tutor;
 
-      // 🧑‍🏫 Guardar IDs de roles
+      
       if (esDocente) {
         const docenteId =
           data.roles.docente.id ?? data.roles.docente.docente_id ?? null;
@@ -56,20 +56,20 @@ export default function Login() {
         }
       }
 
-      // 🔹 Guardar aulas preferidas (si las hay)
+      
       const aulaTutor = data?.roles?.tutor?.aulas?.[0]?.id ?? null;
       if (aulaTutor) {
         localStorage.setItem("tutor_aula_id", aulaTutor);
         console.log("🏫 Guardado aula del tutor:", aulaTutor);
       }
 
-      // --- Redirecciones según tipo ---
+      
       if (data.userType === "coordinador") {
         navigate("/coordinador");
         return;
       }
 
-      // Si tiene ambos roles, mostrar modal
+      
       if (esDocente && esTutor) {
         setRolesInfo(data.roles);
         setSelectOpen(true);
@@ -100,7 +100,6 @@ export default function Login() {
   return (
     <div className="bg-[#004d8f] min-h-screen w-full flex justify-center items-center">
       <div className="bg-white rounded-xl shadow-xl flex flex-col md:flex-row w-[700px] max-w-[90%] overflow-hidden">
-        {/* Columna izquierda */}
         <div className="flex flex-col justify-center items-center p-10 md:w-1/2 bg-white">
           <h1 className="text-[#004d8f] text-4xl font-bold">EVALUATEPE</h1>
           <p className="text-gray-700 mt-3 text-center">
@@ -108,7 +107,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Columna derecha */}
         <div className="flex flex-col justify-center p-10 md:w-1/2 bg-gray-50">
           <h2 className="text-[#004d8f] text-2xl font-semibold mb-6">
             Iniciar sesión
@@ -143,7 +141,6 @@ export default function Login() {
             Contáctanos
           </button>
 
-          {/* Modal para elegir rol */}
           <RoleSelectModal
             open={selectOpen}
             onClose={() => setSelectOpen(false)}

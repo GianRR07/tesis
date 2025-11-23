@@ -3,10 +3,7 @@ import { openDb } from "../db.js";
 
 const router = express.Router();
 
-/**
- * GET /aulas
- * Lista aulas con tutores (desde aulas_docentes_tutores -> docentes) y cursos (con docente asignado si hay).
- */
+
 router.get("/", async (req, res) => {
   try {
     const db = await openDb();
@@ -22,8 +19,8 @@ router.get("/", async (req, res) => {
     `);
 
     for (const aula of aulas) {
-      // TUTORES (docentes en rol de tutor)
-            // TUTORES (desde tabla original aula_tutores + tutores)
+      
+            
       const tutores = await db.all(
         `
         SELECT t.id, t.nombre
@@ -34,11 +31,11 @@ router.get("/", async (req, res) => {
         `,
         [aula.id]
       );
-      aula.tutores = tutores; // [{id, nombre}]
+      aula.tutores = tutores; 
 
-      aula.tutores = tutores; // [{id, nombre}]
+      aula.tutores = tutores; 
 
-      // CURSOS del aula (docente asignado al curso si existe)
+      
       const cursos = await db.all(
         `
         SELECT 
@@ -54,7 +51,7 @@ router.get("/", async (req, res) => {
         `,
         [aula.id]
       );
-      aula.cursos = cursos; // [{id, nombre, docente_id, docente_nombre}]
+      aula.cursos = cursos; 
     }
 
     res.json(aulas);
@@ -64,11 +61,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-/**
- * POST /aulas
- * Crea un aula y opcionalmente asocia cursos (heredando docente_id desde cursos).
- * body: { nombre, grado, seccion, cursos?: number[] }
- */
+
 router.post("/", async (req, res) => {
   let { nombre, grado, seccion, cursos } = req.body;
   const ids = Array.isArray(cursos)
@@ -115,10 +108,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-/**
- * GET /aulas/:aulaId/tutores
- * Lista tutores (docentes en rol de tutor) del aula
- */
+
 router.get("/:aulaId/tutores", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
   if (!Number.isInteger(aulaId)) {
@@ -144,15 +134,11 @@ router.get("/:aulaId/tutores", async (req, res) => {
   }
 });
 
-/**
- * POST /aulas/:aulaId/tutores
- * Asigna tutores (bulk) respetando máximo 2 por aula.
- * body: { docentesIds: number[] }  // también acepta tutoresIds por compatibilidad
- */
+
 router.post("/:aulaId/tutores", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
 
-  // Acepta ambos nombres por compatibilidad
+  
   const { docentesIds, tutoresIds } = req.body ?? {};
   const idsInput = Array.isArray(docentesIds) ? docentesIds : tutoresIds;
 
@@ -171,21 +157,21 @@ router.post("/:aulaId/tutores", async (req, res) => {
   const db = await openDb();
   await db.exec("BEGIN");
   try {
-    // Tutores ya asignados para contar (máx 2)
+    
     const actuales = await db.all("SELECT tutor_id FROM aula_tutores WHERE aula_id = ?", [aulaId]);
     const totalActual = actuales.length;
 
     const agregadosTutorIds = [];
 
     for (const docenteId of ids) {
-      // 1) Docente origen
+      
       const d = await db.get(
         "SELECT id, nombre, email FROM docentes WHERE id = ?",
         [docenteId]
       );
       if (!d) throw new Error(`Docente id=${docenteId} no existe`);
 
-      // 2) Tutor con el mismo email (crear si no existe)
+      
       let t = await db.get("SELECT id FROM tutores WHERE email = ?", [d.email]);
       if (!t) {
         const r = await db.run(
@@ -195,18 +181,18 @@ router.post("/:aulaId/tutores", async (req, res) => {
         t = { id: r.lastID };
       }
 
-      // 3) Evitar duplicado y respetar máximo 2
+      
       const ya = await db.get(
         "SELECT 1 AS ok FROM aula_tutores WHERE aula_id = ? AND tutor_id = ?",
         [aulaId, t.id]
       );
-      if (ya) continue; // ya estaba
+      if (ya) continue; 
 
       if (totalActual + agregadosTutorIds.length >= 2) {
         throw new Error("Máximo 2 tutores por aula.");
       }
 
-      // 4) Insertar relación
+      
       await db.run(
         "INSERT INTO aula_tutores (aula_id, tutor_id) VALUES (?, ?)",
         [aulaId, t.id]
@@ -224,10 +210,7 @@ router.post("/:aulaId/tutores", async (req, res) => {
 });
 
 
-/**
- * DELETE /aulas/:aulaId/tutores/:tutorId
- * Quita un tutor (docente en rol de tutor) del aula
- */
+
 router.delete("/:aulaId/tutores/:tutorId", async (req, res) => {
   const aulaId = Number(req.params.aulaId);
   const tutorId = Number(req.params.tutorId);
@@ -253,10 +236,7 @@ router.delete("/:aulaId/tutores/:tutorId", async (req, res) => {
 });
 
 
-/**
- * PUT /aulas/:id
- * Actualiza nombre/grado/seccion
- */
+
 router.put("/:id", async (req, res) => {
   const id = Number(req.params.id);
   const { nombre, grado, seccion } = req.body;
@@ -288,10 +268,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-/**
- * GET /aulas/:aulaId/estudiantes
- * Lista estudiantes de un aula
- */
+
 router.get("/:aulaId/estudiantes", async (req, res) => {
   const { aulaId } = req.params;
   try {
@@ -313,12 +290,7 @@ router.get("/:aulaId/estudiantes", async (req, res) => {
   }
 });
 
-/**
- * POST /aulas/:aulaId/estudiantes/bulk
- * Registra varios estudiantes por salto de línea
- * body: { lista: "Nombre 1\nNombre 2\n..." }
- */
-router.post("/:aulaId/estudiantes/bulk", async (req, res) => {
+er.post("/:aulaId/estudiantes/bulk", async (req, res) => {
   const { aulaId } = req.params;
   const { lista } = req.body;
 

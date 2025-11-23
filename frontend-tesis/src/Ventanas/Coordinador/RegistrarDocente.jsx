@@ -12,7 +12,7 @@ export default function RegistrarDocente() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validaciones simples en cliente
+    
     if (!nombre || !correo || !correoIngreso || !contrasena) {
       alert("Completa los campos obligatorios: Nombre, Correo, Correo de ingreso y Contraseña.");
       return;
@@ -24,11 +24,11 @@ export default function RegistrarDocente() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre,
-          correo,             // correo de contacto
+          correo,             
           telefono,
-          correoIngreso,      // usuario para login
-          contrasena,         // texto plano; el backend lo hashea
-          cursos              // textarea con saltos de línea
+          correoIngreso,      
+          contrasena,         
+          cursos              
         }),
       });
 
@@ -37,7 +37,7 @@ export default function RegistrarDocente() {
         throw new Error(text || `HTTP ${res.status}`);
       }
 
-      // Éxito
+      
       setNombre("");
       setCorreo("");
       setTelefono("");
@@ -61,7 +61,6 @@ export default function RegistrarDocente() {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
-        {/* Columna izquierda */}
         <div className="space-y-4">
           <label className="block">
             <span className="font-medium text-gray-700">Nombre del docente:</span>
@@ -134,7 +133,6 @@ export default function RegistrarDocente() {
           </label>
         </div>
 
-        {/* Columna derecha */}
         <div className="space-y-4">
           <label className="block">
             <span className="font-medium text-gray-700">Cursos que enseña:</span>
@@ -150,7 +148,6 @@ export default function RegistrarDocente() {
           </p>
         </div>
 
-        {/* Footer */}
         <div className="md:col-span-2 flex justify-end">
           <button
             type="submit"

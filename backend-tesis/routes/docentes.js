@@ -1,11 +1,11 @@
-// backend-tesis/routes/docentes.js
+
 import express from "express";
 import bcrypt from "bcryptjs";
 import { openDb } from "../db.js";
 
 const router = express.Router();
 
-// Listar docentes (oculta password_hash)
+
 router.get("/", async (req, res) => {
   try {
     const db = await openDb();
@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
 });
 
 
-// Eliminar docente por ID
+
 router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -30,30 +30,30 @@ router.delete("/:id", async (req, res) => {
     }
     const db = await openDb();
 
-    // Opcional: validar existencia
+    
     const existe = await db.get("SELECT id FROM docentes WHERE id = ?", [id]);
     if (!existe) {
       return res.status(404).json({ error: "NOT_FOUND", message: "Docente no encontrado" });
     }
 
     await db.run("DELETE FROM docentes WHERE id = ?", [id]);
-    return res.status(204).send(); // No Content
+    return res.status(204).send(); 
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
 
-// Crear docente (guarda todos los campos + hash de contraseña)
+
 router.post("/", async (req, res) => {
   try {
     const {
       nombre,
-      correo: email,     // correo de contacto (desde el frontend)
+      correo: email,     
       telefono,
-      cursos: cursosRaw, // textarea del frontend
-      correoIngreso,     // usuario para login
-      contrasena         // texto plano; se hashea aquí
+      cursos: cursosRaw, 
+      correoIngreso,     
+      contrasena         
     } = req.body;
 
     if (!nombre || !email || !correoIngreso || !contrasena) {
@@ -63,14 +63,14 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Normaliza cursos: guarda como texto con saltos de línea
+    
     const cursos_que_ensena = (cursosRaw ?? "")
       .split(/\r?\n/)
       .map(s => s.trim())
       .filter(Boolean)
       .join("\n");
 
-    // Hash de contraseña
+    
     const password_hash = await bcrypt.hash(contrasena, 10);
 
     const db = await openDb();
@@ -83,12 +83,12 @@ router.post("/", async (req, res) => {
     return res.status(201).json({ message: "Docente registrado" });
   } catch (err) {
     console.error(err);
-    // Ej: violación de UNIQUE en email o correo_ingreso
+    
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
 
-// Actualizar docente (datos básicos; no cambia password aquí)
+
 router.put("/:id", async (req, res) => {
   const id = Number(req.params.id);
   const { nombre, email, telefono, cursos_que_ensena, correo_ingreso } = req.body;
@@ -118,14 +118,14 @@ router.put("/:id", async (req, res) => {
     return res.json({ id, nombre, email, telefono, cursos_que_ensena, correo_ingreso });
   } catch (err) {
     console.error(err);
-    // UNIQUE(email/correo_ingreso) podría romper
+    
     return res.status(500).json({ error: "INTERNAL_ERROR", message: err.message });
   }
 });
 
 
-// ===== NUEVO: Aulas donde enseña un docente =====
-// GET /docentes/:id/aulas  (?cursoId=opcional)
+
+
 router.get("/:id/aulas", async (req, res) => {
   const docenteId = Number(req.params.id);
   const { cursoId } = req.query;
@@ -156,8 +156,8 @@ router.get("/:id/aulas", async (req, res) => {
   }
 });
 
-// ===== NUEVO: Estudiantes de un aula (vía docente) =====
-// GET /docentes/:id/estudiantes?aulaId=NN
+
+
 router.get("/:id/estudiantes", async (req, res) => {
   const aulaId = Number(req.query.aulaId);
   if (!Number.isInteger(aulaId)) {
@@ -193,7 +193,7 @@ router.get("/:id/resultados", async (req, res) => {
       return res.status(400).json({ error: "VALIDATION_ERROR", message: "docenteId y aulaId deben ser enteros" });
     }
 
-    const db = await openDb(); // <<<<<<<<<<<<<<<<<<<<<< Aquí se define db
+    const db = await openDb(); 
 
     const evaluaciones = await db.all(
       `
