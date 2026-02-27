@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 // Importamos los componentes de cada opción
 import GestionarAula from "./GestionarAula";
@@ -10,6 +12,14 @@ import ListaDocentes from "./ListaDocentes";
 
 export default function OpcionesCoordinador() {
   const [active, setActive] = useState("inicio");
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("session");
+    navigate("/");
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -26,8 +36,8 @@ export default function OpcionesCoordinador() {
 
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${active === "gestionarAula"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
                 }`}
               onClick={() => setActive("gestionarAula")}
             >
@@ -37,8 +47,8 @@ export default function OpcionesCoordinador() {
 
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${active === "registrarCurso"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
                 }`}
               onClick={() => setActive("registrarCurso")}
             >
@@ -47,8 +57,8 @@ export default function OpcionesCoordinador() {
 
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${active === "registrarDocente"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
                 }`}
               onClick={() => setActive("registrarDocente")}
             >
@@ -57,8 +67,8 @@ export default function OpcionesCoordinador() {
 
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${active === "asignarTutor"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
                 }`}
               onClick={() => setActive("asignarTutor")}
             >
@@ -67,8 +77,8 @@ export default function OpcionesCoordinador() {
 
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${active === "listaAulas"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
                 }`}
               onClick={() => setActive("listaAulas")}
             >
@@ -77,8 +87,8 @@ export default function OpcionesCoordinador() {
 
             <button
               className={`py-2 px-4 rounded-full font-bold transition ${active === "listaDocentes"
-                  ? "bg-gray-300 text-[#004d8f]"
-                  : "bg-white text-[#004d8f] hover:bg-gray-200"
+                ? "bg-gray-300 text-[#004d8f]"
+                : "bg-white text-[#004d8f] hover:bg-gray-200"
                 }`}
               onClick={() => setActive("listaDocentes")}
             >
@@ -86,9 +96,13 @@ export default function OpcionesCoordinador() {
             </button>
           </div>
 
-          <button className="w-full mt-6 bg-red-100 text-red-600 font-bold rounded-full py-2 hover:bg-red-200 transition">
+          <button
+            onClick={handleLogout}
+            className="w-full mt-6 bg-red-100 text-red-600 font-bold rounded-full py-2 hover:bg-red-200 transition"
+          >
             Cerrar Sesión
           </button>
+
         </aside>
 
         {/* Contenido principal */}
@@ -101,7 +115,7 @@ export default function OpcionesCoordinador() {
               <p className="mt-2">Seleccione una opción del menú lateral</p>
             </div>
           )}
-          
+
           {active === "gestionarAula" && <GestionarAula />}
           {active === "registrarCurso" && <RegistrarCurso />}
           {active === "registrarDocente" && <RegistrarDocente />}
